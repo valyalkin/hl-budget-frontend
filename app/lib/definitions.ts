@@ -1,3 +1,5 @@
+import type { components } from '@/app/lib/api-schema';
+
 /** A non-2xx answer from the API, carrying the problem's `type` URN and `traceId`. */
 export class ApiError extends Error {
   constructor(
@@ -25,3 +27,11 @@ export class ApiUnavailableError extends Error {
     this.name = 'ApiUnavailableError';
   }
 }
+
+type Schemas = components['schemas'];
+
+/** The signed-in user's record, as returned by PUT /api/v1/users/me. Generated, never hand-written. */
+export type UserProfile = Schemas['UserProfile'];
+
+/** What the greeting and avatar need. */
+export type ProfileNames = Pick<UserProfile, 'displayName' | 'email'>;
