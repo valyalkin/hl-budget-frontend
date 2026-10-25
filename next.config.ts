@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   // Caching is explicit via 'use cache'; per-user reads stay dynamic.
   cacheComponents: true,
+  partialPrefetching: true,
   poweredByHeader: false,
   async headers() {
     return [

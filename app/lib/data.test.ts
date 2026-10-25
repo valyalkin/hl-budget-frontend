@@ -1,12 +1,17 @@
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '@/mocks/server';
+import { UnauthenticatedError } from '@/app/lib/definitions';
 import { ensureMyProfile } from '@/app/lib/data';
 
-const { getAccessToken } = vi.hoisted(() => ({
+const { getAccessToken, redirect } = vi.hoisted(() => ({
   getAccessToken: vi.fn(async () => 'test-token'),
+  redirect: vi.fn(() => {
+    throw new Error('NEXT_REDIRECT');
+  }),
 }));
 vi.mock('@/app/lib/auth', () => ({ getAccessToken }));
+vi.mock('next/navigation', () => ({ redirect }));
 
 const URL = 'http://api.test/api/v1/users/me';
 const profile = {
@@ -37,5 +42,44 @@ describe('ensureMyProfile', () => {
     );
     await ensureMyProfile();
     expect(seen).toEqual({ method: 'PUT', auth: 'Bearer test-token' });
+  });
+});
+
+describe('ensureMyProfile failures (US4)', () => {
+  it('sends the user to sign in again when the API answers 401', async () => {
+    server.use(http.put(URL, () => new HttpResponse(null, { status: 401 })));
+    await expect(ensureMyProfile()).rejects.toThrow('NEXT_REDIRECT');
+    expect(redirect).toHaveBeenCalledWith('/auth/login?returnTo=/home');
+  });
+
+  it('sends the user to sign in again when there is no usable token', async () => {
+    getAccessToken.mockRejectedValueOnce(new UnauthenticatedError());
+    await expect(ensureMyProfile()).rejects.toThrow('NEXT_REDIRECT');
+    expect(redirect).toHaveBeenCalledWith('/auth/login?returnTo=/home');
+  });
+
+  it('throws on a 500 problem, for the error boundary', async () => {
+    server.use(
+      http.put(URL, () =>
+        HttpResponse.json({ traceId: 't1' }, { status: 500 }),
+      ),
+    );
+    await expect(ensureMyProfile()).rejects.toMatchObject({ status: 500 });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it('throws on a timeout', async () => {
+    server.use(
+      http.put(URL, async () => {
+        await delay(1000);
+        return HttpResponse.json(profile);
+      }),
+    );
+    await expect(ensureMyProfile()).rejects.toThrow('unavailable');
+  });
+
+  it('throws when the connection is refused', async () => {
+    server.use(http.put(URL, () => HttpResponse.error()));
+    await expect(ensureMyProfile()).rejects.toThrow('unavailable');
   });
 });

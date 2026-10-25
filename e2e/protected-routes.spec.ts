@@ -11,7 +11,8 @@ test.describe('US2: protected pages require sign-in (SC-003)', () => {
     expect(response.headers()['location']).toContain(
       '/auth/login?returnTo=%2Fhome%3Fx%3D1',
     );
-    expect(await response.text()).toBe('');
+    // Next echoes the redirect target as plain text; no page or profile is rendered.
+    expect(await response.text()).not.toMatch(/<html|Hello/i);
   });
 
   test('after signing in, the user is back on the page they asked for', async ({
