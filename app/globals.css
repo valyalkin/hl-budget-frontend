@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+
+/* Design tokens live here, never in component class strings. */
+@theme {
+  --animate-shimmer: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
