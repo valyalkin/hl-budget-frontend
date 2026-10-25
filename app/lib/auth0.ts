@@ -24,6 +24,9 @@ export const auth0 = new Auth0Client({
     inactivityDuration: 7 * DAY,
     absoluteDuration: 30 * DAY,
   },
+  // Sign-out ends the Auth0 session too, via OIDC RP-initiated logout, and returns to
+  // APP_BASE_URL (which must be in the tenant's Allowed Logout URLs).
+  logoutStrategy: 'oidc',
   routes: {
     login: '/auth/login',
     callback: '/auth/callback',
