@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
 permissions:
@@ -60,7 +60,7 @@ jobs:
           POSTGRES_DB: hl-budget
           POSTGRES_USER: hl-budget
           POSTGRES_PASSWORD: hl-budget
-        ports: [ "5432:5432" ]
+        ports: ['5432:5432']
     env:
       AUTH0_DOMAIN: ${{ secrets.E2E_AUTH0_DOMAIN }}
       AUTH0_CLIENT_ID: ${{ secrets.E2E_AUTH0_CLIENT_ID }}
