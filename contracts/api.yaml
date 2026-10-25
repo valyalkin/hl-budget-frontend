@@ -7,63 +7,62 @@ info:
     `application/problem+json` with a stable `type` URN and a `traceId`.
   version: 1.0.0
 servers:
-  - url: /
-    description: Same host as the web app; the backend serves /api
+- url: /
+  description: Same host as the web app; the backend serves /api
 security:
-  - bearerAuth: []
+- bearerAuth: []
 tags:
-  - name: Users
-    description: The signed-in user's own record
-  - name: Operations
-    description: Unversioned probes for the platform (not routed through the ingress)
+- name: Users
+  description: The signed-in user's own record
+- name: Operations
+  description: Unversioned probes for the platform (not routed through the ingress)
 paths:
   /healthz:
     get:
       tags:
-        - Operations
+      - Operations
       summary: Liveness probe; checks no dependencies
       operationId: liveness
       responses:
-        '200':
+        "200":
           description: Process is alive
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatus'
+                $ref: "#/components/schemas/HealthStatus"
               example:
                 status: UP
       security: []
   /readyz:
     get:
       tags:
-        - Operations
+      - Operations
       summary: Readiness probe; fails while Postgres is unreachable
       operationId: readiness
       responses:
-        '200':
+        "200":
           description: Ready to serve
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatus'
+                $ref: "#/components/schemas/HealthStatus"
               example:
                 status: UP
-        '503':
+        "503":
           description: Not ready (database unreachable). No details are disclosed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatus'
+                $ref: "#/components/schemas/HealthStatus"
               example:
                 status: DOWN
       security: []
   /api/v1/users/me:
     put:
       tags:
-        - Users
+      - Users
       summary: Create or refresh the caller's user record and return it
-      description:
-        "Identifies the caller only from the validated access token (`sub`).\
+      description: "Identifies the caller only from the validated access token (`sub`).\
         \ On the first call for a `sub`, creates the user record and returns 201 with\
         \ a `Location` header. On later calls, sets `lastSeenAt` to now, refreshes\
         \ `displayName`, `email` and `avatarUrl` from the token's claims, and returns\
@@ -71,24 +70,24 @@ paths:
         \ no request body and no user identifier."
       operationId: ensureMyProfile
       responses:
-        '200':
+        "200":
           description: Existing record refreshed
           headers:
             X-Request-Id:
-              $ref: '#/components/headers/X-Request-Id'
+              $ref: "#/components/headers/X-Request-Id"
               style: simple
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProfile'
+                $ref: "#/components/schemas/UserProfile"
               examples:
                 returning:
-                  $ref: '#/components/examples/ProfileReturning'
-        '201':
+                  $ref: "#/components/examples/ProfileReturning"
+        "201":
           description: Record created on first call
           headers:
             X-Request-Id:
-              $ref: '#/components/headers/X-Request-Id'
+              $ref: "#/components/headers/X-Request-Id"
               style: simple
             Location:
               description: Address of the created resource
@@ -99,36 +98,35 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProfile'
+                $ref: "#/components/schemas/UserProfile"
               examples:
                 firstVisit:
-                  $ref: '#/components/examples/ProfileFirstVisit'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '500':
-          $ref: '#/components/responses/InternalError'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                  $ref: "#/components/examples/ProfileFirstVisit"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 components:
   schemas:
     Problem:
       type: object
-      description:
-        "RFC 9457 problem details, as produced by the backend's single\
+      description: "RFC 9457 problem details, as produced by the backend's single\
         \ error handler"
       properties:
         type:
           type: string
           description: Stable URN naming the error category
           enum:
-            - urn:problem:hl-budget:unauthenticated
-            - urn:problem:hl-budget:access-denied
-            - urn:problem:hl-budget:bad-request
-            - urn:problem:hl-budget:not-found
-            - urn:problem:hl-budget:conflict
-            - urn:problem:hl-budget:unprocessable-entity
-            - urn:problem:hl-budget:internal-error
-            - urn:problem:hl-budget:service-unavailable
+          - urn:problem:hl-budget:unauthenticated
+          - urn:problem:hl-budget:access-denied
+          - urn:problem:hl-budget:bad-request
+          - urn:problem:hl-budget:not-found
+          - urn:problem:hl-budget:conflict
+          - urn:problem:hl-budget:unprocessable-entity
+          - urn:problem:hl-budget:internal-error
+          - urn:problem:hl-budget:service-unavailable
         title:
           type: string
         status:
@@ -138,7 +136,7 @@ components:
           minimum: 400
         detail:
           type: string
-          description: 'Human-readable explanation. For 5xx always a fixed, safe sentence'
+          description: "Human-readable explanation. For 5xx always a fixed, safe sentence"
         instance:
           type: string
           description: Request path
@@ -150,27 +148,26 @@ components:
         details:
           type: object
           additionalProperties: true
-          description:
-            "Structured, scalar-only context; `reason` when a client must\
+          description: "Structured, scalar-only context; `reason` when a client must\
             \ branch"
         errors:
           type: array
           description: One entry per offending field (validation failures only)
           items:
-            $ref: '#/components/schemas/FieldViolation'
+            $ref: "#/components/schemas/FieldViolation"
       required:
-        - instance
-        - status
-        - timestamp
-        - title
-        - traceId
-        - type
+      - instance
+      - status
+      - timestamp
+      - title
+      - traceId
+      - type
     FieldViolation:
       type: object
       properties:
         pointer:
           type: string
-          example: '#/name'
+          example: "#/name"
         field:
           type: string
           example: name
@@ -181,20 +178,20 @@ components:
           type: string
           example: must not be blank
       required:
-        - code
-        - field
-        - message
-        - pointer
+      - code
+      - field
+      - message
+      - pointer
     HealthStatus:
       type: object
       properties:
         status:
           type: string
           enum:
-            - UP
-            - DOWN
+          - UP
+          - DOWN
       required:
-        - status
+      - status
     UserProfile:
       type: object
       additionalProperties: false
@@ -206,23 +203,23 @@ components:
           example: 0b9f6c1e-3c1a-4f2e-9a57-2f1d6c2b8e11
         displayName:
           type:
-            - string
-            - 'null'
+          - string
+          - "null"
           description: Name from the identity provider; null when it has none
           example: Alex Example
           maxLength: 255
         email:
           type:
-            - string
-            - 'null'
+          - string
+          - "null"
           format: email
           description: Email from the identity provider; null when it has none
           example: alex@example.com
           maxLength: 320
         avatarUrl:
           type:
-            - string
-            - 'null'
+          - string
+          - "null"
           format: uri
           description: HTTPS address of the avatar image; null when there is none
           example: https://lh3.googleusercontent.com/a/example
@@ -238,20 +235,19 @@ components:
           description: When the user last called this operation (UTC)
           example: 2026-10-26T18:02:41Z
       required:
-        - avatarUrl
-        - displayName
-        - email
-        - firstSeenAt
-        - id
-        - lastSeenAt
+      - avatarUrl
+      - displayName
+      - email
+      - firstSeenAt
+      - id
+      - lastSeenAt
   responses:
     Unauthenticated:
-      description:
-        "Missing, malformed, expired, wrongly signed, wrong-issuer or wrong-audience\
+      description: "Missing, malformed, expired, wrongly signed, wrong-issuer or wrong-audience\
         \ token. No user data is returned or created."
       headers:
         X-Request-Id:
-          $ref: '#/components/headers/X-Request-Id'
+          $ref: "#/components/headers/X-Request-Id"
         WWW-Authenticate:
           schema:
             type: string
@@ -259,7 +255,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: "#/components/schemas/Problem"
           example:
             type: urn:problem:hl-budget:unauthenticated
             title: Unauthorized
@@ -272,11 +268,11 @@ components:
       description: Unexpected failure. Cause is logged against traceId and never returned
       headers:
         X-Request-Id:
-          $ref: '#/components/headers/X-Request-Id'
+          $ref: "#/components/headers/X-Request-Id"
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: "#/components/schemas/Problem"
           example:
             type: urn:problem:hl-budget:internal-error
             title: Internal Server Error
@@ -289,11 +285,11 @@ components:
       description: A required dependency (the database) is unreachable
       headers:
         X-Request-Id:
-          $ref: '#/components/headers/X-Request-Id'
+          $ref: "#/components/headers/X-Request-Id"
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: "#/components/schemas/Problem"
           example:
             type: urn:problem:hl-budget:service-unavailable
             title: Service Unavailable
@@ -323,8 +319,7 @@ components:
         lastSeenAt: 2026-10-26T18:02:41Z
   headers:
     X-Request-Id:
-      description:
-        Trace reference for this request; equals `traceId` in any problem
+      description: Trace reference for this request; equals `traceId` in any problem
         body
       schema:
         type: string
@@ -332,8 +327,7 @@ components:
   securitySchemes:
     bearerAuth:
       type: http
-      description:
-        "Auth0 access token (RS256) for the HL Budget API audience. Validated\
+      description: "Auth0 access token (RS256) for the HL Budget API audience. Validated\
         \ for signature, issuer, audience and expiry on every request."
       scheme: bearer
       bearerFormat: JWT

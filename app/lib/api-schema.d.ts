@@ -4,322 +4,314 @@
  */
 
 export interface paths {
-  '/healthz': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/healthz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liveness probe; checks no dependencies */
+        get: operations["liveness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Liveness probe; checks no dependencies */
-    get: operations['liveness'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/readyz': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/readyz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness probe; fails while Postgres is unreachable */
+        get: operations["readiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Readiness probe; fails while Postgres is unreachable */
-    get: operations['readiness'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/users/me': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Create or refresh the caller's user record and return it
+         * @description Identifies the caller only from the validated access token (`sub`). On the first call for a `sub`, creates the user record and returns 201 with a `Location` header. On later calls, sets `lastSeenAt` to now, refreshes `displayName`, `email` and `avatarUrl` from the token's claims, and returns 200. Idempotent: concurrent first calls yield exactly one record. Takes no request body and no user identifier.
+         */
+        put: operations["ensureMyProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /**
-     * Create or refresh the caller's user record and return it
-     * @description Identifies the caller only from the validated access token (`sub`). On the first call for a `sub`, creates the user record and returns 201 with a `Location` header. On later calls, sets `lastSeenAt` to now, refreshes `displayName`, `email` and `avatarUrl` from the token's claims, and returns 200. Idempotent: concurrent first calls yield exactly one record. Takes no request body and no user identifier.
-     */
-    put: operations['ensureMyProfile'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    /** @description RFC 9457 problem details, as produced by the backend's single error handler */
-    Problem: {
-      /**
-       * @description Stable URN naming the error category
-       * @enum {string}
-       */
-      type:
-        | 'urn:problem:hl-budget:unauthenticated'
-        | 'urn:problem:hl-budget:access-denied'
-        | 'urn:problem:hl-budget:bad-request'
-        | 'urn:problem:hl-budget:not-found'
-        | 'urn:problem:hl-budget:conflict'
-        | 'urn:problem:hl-budget:unprocessable-entity'
-        | 'urn:problem:hl-budget:internal-error'
-        | 'urn:problem:hl-budget:service-unavailable';
-      title: string;
-      /** Format: int32 */
-      status: number;
-      /** @description Human-readable explanation. For 5xx always a fixed, safe sentence */
-      detail?: string;
-      /** @description Request path */
-      instance: string;
-      /** Format: date-time */
-      timestamp: string;
-      traceId: string;
-      /** @description Structured, scalar-only context; `reason` when a client must branch */
-      details?: {
-        [key: string]: unknown;
-      };
-      /** @description One entry per offending field (validation failures only) */
-      errors?: components['schemas']['FieldViolation'][];
+    schemas: {
+        /** @description RFC 9457 problem details, as produced by the backend's single error handler */
+        Problem: {
+            /**
+             * @description Stable URN naming the error category
+             * @enum {string}
+             */
+            type: "urn:problem:hl-budget:unauthenticated" | "urn:problem:hl-budget:access-denied" | "urn:problem:hl-budget:bad-request" | "urn:problem:hl-budget:not-found" | "urn:problem:hl-budget:conflict" | "urn:problem:hl-budget:unprocessable-entity" | "urn:problem:hl-budget:internal-error" | "urn:problem:hl-budget:service-unavailable";
+            title: string;
+            /** Format: int32 */
+            status: number;
+            /** @description Human-readable explanation. For 5xx always a fixed, safe sentence */
+            detail?: string;
+            /** @description Request path */
+            instance: string;
+            /** Format: date-time */
+            timestamp: string;
+            traceId: string;
+            /** @description Structured, scalar-only context; `reason` when a client must branch */
+            details?: {
+                [key: string]: unknown;
+            };
+            /** @description One entry per offending field (validation failures only) */
+            errors?: components["schemas"]["FieldViolation"][];
+        };
+        FieldViolation: {
+            /** @example #/name */
+            pointer: string;
+            /** @example name */
+            field: string;
+            /** @example NotBlank */
+            code: string;
+            /** @example must not be blank */
+            message: string;
+        };
+        HealthStatus: {
+            /** @enum {string} */
+            status: "UP" | "DOWN";
+        };
+        UserProfile: {
+            /**
+             * Format: uuid
+             * @description Opaque HL Budget identifier for the user. Not the Auth0 subject
+             * @example 0b9f6c1e-3c1a-4f2e-9a57-2f1d6c2b8e11
+             */
+            id: string;
+            /**
+             * @description Name from the identity provider; null when it has none
+             * @example Alex Example
+             */
+            displayName: string | null;
+            /**
+             * Format: email
+             * @description Email from the identity provider; null when it has none
+             * @example alex@example.com
+             */
+            email: string | null;
+            /**
+             * Format: uri
+             * @description HTTPS address of the avatar image; null when there is none
+             * @example https://lh3.googleusercontent.com/a/example
+             */
+            avatarUrl: string | null;
+            /**
+             * Format: date-time
+             * @description When the record was created (UTC)
+             * @example 2026-10-25T09:15:00Z
+             */
+            firstSeenAt: string;
+            /**
+             * Format: date-time
+             * @description When the user last called this operation (UTC)
+             * @example 2026-10-26T18:02:41Z
+             */
+            lastSeenAt: string;
+        };
     };
-    FieldViolation: {
-      /** @example #/name */
-      pointer: string;
-      /** @example name */
-      field: string;
-      /** @example NotBlank */
-      code: string;
-      /** @example must not be blank */
-      message: string;
+    responses: {
+        /** @description Missing, malformed, expired, wrongly signed, wrong-issuer or wrong-audience token. No user data is returned or created. */
+        Unauthenticated: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                "WWW-Authenticate"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "urn:problem:hl-budget:unauthenticated",
+                 *       "title": "Unauthorized",
+                 *       "status": 401,
+                 *       "detail": "A valid bearer token is required",
+                 *       "instance": "/api/v1/users/me",
+                 *       "timestamp": "2026-10-25T09:15:00Z",
+                 *       "traceId": "4be0baf6ee174255"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Unexpected failure. Cause is logged against traceId and never returned */
+        InternalError: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "urn:problem:hl-budget:internal-error",
+                 *       "title": "Internal Server Error",
+                 *       "status": 500,
+                 *       "detail": "An unexpected error occurred",
+                 *       "instance": "/api/v1/users/me",
+                 *       "timestamp": "2026-10-25T09:15:00Z",
+                 *       "traceId": "4be0baf6ee174255"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description A required dependency (the database) is unreachable */
+        ServiceUnavailable: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "urn:problem:hl-budget:service-unavailable",
+                 *       "title": "Service Unavailable",
+                 *       "status": 503,
+                 *       "detail": "The service is temporarily unavailable",
+                 *       "instance": "/api/v1/users/me",
+                 *       "timestamp": "2026-10-25T09:15:00Z",
+                 *       "traceId": "4be0baf6ee174255"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
-    HealthStatus: {
-      /** @enum {string} */
-      status: 'UP' | 'DOWN';
+    parameters: never;
+    requestBodies: never;
+    headers: {
+        /** @description Trace reference for this request; equals `traceId` in any problem body */
+        "X-Request-Id": string;
     };
-    UserProfile: {
-      /**
-       * Format: uuid
-       * @description Opaque HL Budget identifier for the user. Not the Auth0 subject
-       * @example 0b9f6c1e-3c1a-4f2e-9a57-2f1d6c2b8e11
-       */
-      id: string;
-      /**
-       * @description Name from the identity provider; null when it has none
-       * @example Alex Example
-       */
-      displayName: string | null;
-      /**
-       * Format: email
-       * @description Email from the identity provider; null when it has none
-       * @example alex@example.com
-       */
-      email: string | null;
-      /**
-       * Format: uri
-       * @description HTTPS address of the avatar image; null when there is none
-       * @example https://lh3.googleusercontent.com/a/example
-       */
-      avatarUrl: string | null;
-      /**
-       * Format: date-time
-       * @description When the record was created (UTC)
-       * @example 2026-10-25T09:15:00Z
-       */
-      firstSeenAt: string;
-      /**
-       * Format: date-time
-       * @description When the user last called this operation (UTC)
-       * @example 2026-10-26T18:02:41Z
-       */
-      lastSeenAt: string;
-    };
-  };
-  responses: {
-    /** @description Missing, malformed, expired, wrongly signed, wrong-issuer or wrong-audience token. No user data is returned or created. */
-    Unauthenticated: {
-      headers: {
-        'X-Request-Id': components['headers']['X-Request-Id'];
-        'WWW-Authenticate'?: string;
-        [name: string]: unknown;
-      };
-      content: {
-        /**
-         * @example {
-         *       "type": "urn:problem:hl-budget:unauthenticated",
-         *       "title": "Unauthorized",
-         *       "status": 401,
-         *       "detail": "A valid bearer token is required",
-         *       "instance": "/api/v1/users/me",
-         *       "timestamp": "2026-10-25T09:15:00Z",
-         *       "traceId": "4be0baf6ee174255"
-         *     }
-         */
-        'application/problem+json': components['schemas']['Problem'];
-      };
-    };
-    /** @description Unexpected failure. Cause is logged against traceId and never returned */
-    InternalError: {
-      headers: {
-        'X-Request-Id': components['headers']['X-Request-Id'];
-        [name: string]: unknown;
-      };
-      content: {
-        /**
-         * @example {
-         *       "type": "urn:problem:hl-budget:internal-error",
-         *       "title": "Internal Server Error",
-         *       "status": 500,
-         *       "detail": "An unexpected error occurred",
-         *       "instance": "/api/v1/users/me",
-         *       "timestamp": "2026-10-25T09:15:00Z",
-         *       "traceId": "4be0baf6ee174255"
-         *     }
-         */
-        'application/problem+json': components['schemas']['Problem'];
-      };
-    };
-    /** @description A required dependency (the database) is unreachable */
-    ServiceUnavailable: {
-      headers: {
-        'X-Request-Id': components['headers']['X-Request-Id'];
-        [name: string]: unknown;
-      };
-      content: {
-        /**
-         * @example {
-         *       "type": "urn:problem:hl-budget:service-unavailable",
-         *       "title": "Service Unavailable",
-         *       "status": 503,
-         *       "detail": "The service is temporarily unavailable",
-         *       "instance": "/api/v1/users/me",
-         *       "timestamp": "2026-10-25T09:15:00Z",
-         *       "traceId": "4be0baf6ee174255"
-         *     }
-         */
-        'application/problem+json': components['schemas']['Problem'];
-      };
-    };
-  };
-  parameters: never;
-  requestBodies: never;
-  headers: {
-    /** @description Trace reference for this request; equals `traceId` in any problem body */
-    'X-Request-Id': string;
-  };
-  pathItems: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  liveness: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    liveness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Process is alive */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "status": "UP"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HealthStatus"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Process is alive */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    readiness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          /**
-           * @example {
-           *       "status": "UP"
-           *     }
-           */
-          'application/json': components['schemas']['HealthStatus'];
+        requestBody?: never;
+        responses: {
+            /** @description Ready to serve */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "status": "UP"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HealthStatus"];
+                };
+            };
+            /** @description Not ready (database unreachable). No details are disclosed */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "status": "DOWN"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HealthStatus"];
+                };
+            };
         };
-      };
     };
-  };
-  readiness: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    ensureMyProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existing record refreshed */
+            200: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+            /** @description Record created on first call */
+            201: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    /** @description Address of the created resource */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Ready to serve */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          /**
-           * @example {
-           *       "status": "UP"
-           *     }
-           */
-          'application/json': components['schemas']['HealthStatus'];
-        };
-      };
-      /** @description Not ready (database unreachable). No details are disclosed */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          /**
-           * @example {
-           *       "status": "DOWN"
-           *     }
-           */
-          'application/json': components['schemas']['HealthStatus'];
-        };
-      };
-    };
-  };
-  ensureMyProfile: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Existing record refreshed */
-      200: {
-        headers: {
-          'X-Request-Id': components['headers']['X-Request-Id'];
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['UserProfile'];
-        };
-      };
-      /** @description Record created on first call */
-      201: {
-        headers: {
-          'X-Request-Id': components['headers']['X-Request-Id'];
-          /** @description Address of the created resource */
-          Location?: string;
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['UserProfile'];
-        };
-      };
-      401: components['responses']['Unauthenticated'];
-      500: components['responses']['InternalError'];
-      503: components['responses']['ServiceUnavailable'];
-    };
-  };
 }
