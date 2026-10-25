@@ -1,5 +1,11 @@
 import type { Instrumentation } from 'next';
 
+/** Runs once when the server starts: a missing or invalid variable stops it right there. */
+export async function register() {
+  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
+  await import('@/app/lib/env');
+}
+
 export const onRequestError: Instrumentation.onRequestError = async (
   error,
   request,
