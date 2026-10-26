@@ -1,5 +1,11 @@
-import { expect, it, vi } from 'vitest';
-import { reportError, toErrorReport } from '@/app/lib/observability';
+import { AuthorizationError, OAuth2Error } from '@auth0/nextjs-auth0/errors';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  reportError,
+  reportSignInFailure,
+  toErrorReport,
+  toSignInFailureReport,
+} from '@/app/lib/observability';
 
 const request = {
   path: '/home',
@@ -41,4 +47,45 @@ it('writes one JSON line to stdout', () => {
   const line = String(write.mock.calls[0]?.[0]);
   expect(line.endsWith('\n')).toBe(true);
   expect(JSON.parse(line)).toMatchObject({ message: 'boom', path: '/home' });
+});
+
+describe('toSignInFailureReport', () => {
+  it("names the SDK code and Auth0's own reason from the cause", () => {
+    const error = new AuthorizationError({
+      cause: new OAuth2Error({
+        code: 'access_denied',
+        message: 'Client is not authorized to access resource server',
+      }),
+      message: 'An error occurred during the authorization flow.',
+    });
+
+    expect(toSignInFailureReport(error)).toEqual({
+      level: 'warn',
+      event: 'signin_failed',
+      code: 'authorization_error',
+      message: 'An error occurred during the authorization flow.',
+      causeCode: 'access_denied',
+      causeMessage: 'Client is not authorized to access resource server',
+    });
+  });
+
+  it('handles an error without a cause, and a non-Error value', () => {
+    expect(toSignInFailureReport(new Error('boom'))).toMatchObject({
+      message: 'boom',
+      causeCode: undefined,
+    });
+    expect(toSignInFailureReport('nope')).toMatchObject({ message: 'nope' });
+  });
+
+  it('writes one JSON line', () => {
+    const write = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    reportSignInFailure(toSignInFailureReport(new Error('boom')));
+    expect(JSON.parse(String(write.mock.calls[0]?.[0]))).toMatchObject({
+      event: 'signin_failed',
+      message: 'boom',
+    });
+    write.mockRestore();
+  });
 });

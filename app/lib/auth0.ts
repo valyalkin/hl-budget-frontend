@@ -3,6 +3,10 @@ import 'server-only';
 import { Auth0Client } from '@auth0/nextjs-auth0/server';
 import { NextResponse } from 'next/server';
 import { env } from '@/app/lib/env';
+import {
+  reportSignInFailure,
+  toSignInFailureReport,
+} from '@/app/lib/observability';
 import { safeReturnTo } from '@/app/lib/safe-return-to';
 
 const DAY = 60 * 60 * 24;
@@ -12,12 +16,15 @@ export const SIGN_IN_FAILED_PATH = '/?signin=failed';
 /**
  * After Auth0 redirects back. A cancelled, denied or failed sign-in lands on the landing page
  * with a notice (FR-006); a success goes to the requested page if it is on this origin, else
- * /home (FR-003).
+ * /home (FR-003). A failure is logged with Auth0's reason, since the notice shows none.
  */
 export async function onCallback(
   error: unknown,
   context: { returnTo?: string },
 ): Promise<NextResponse> {
+  if (error) {
+    reportSignInFailure(toSignInFailureReport(error));
+  }
   const target = error
     ? SIGN_IN_FAILED_PATH
     : safeReturnTo(context.returnTo, env.APP_BASE_URL);
