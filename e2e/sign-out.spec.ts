@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { signIn } from './support';
+import { PASSWORD_LABEL, signIn } from './support';
 
 test.describe('US3: sign out', () => {
   test('Sign out ends the session here and at Auth0', async ({ page }) => {
@@ -20,6 +20,6 @@ test.describe('US3: sign out', () => {
     await page.goto('/home');
     await page.waitForURL(/\/u\/login|\/authorize/);
     // …and Auth0 asks for credentials rather than signing in silently.
-    await expect(page.getByLabel(/^password$/i)).toBeVisible();
+    await expect(page.getByLabel(PASSWORD_LABEL)).toBeVisible();
   });
 });

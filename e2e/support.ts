@@ -14,12 +14,18 @@ export function credentials() {
   return { username: username ?? '', password: password ?? '' };
 }
 
+/**
+ * Auth0 labels the field "Password *" (required marker), so match the start only. Not
+ * /password/i: that would also match the "Show password" switch.
+ */
+export const PASSWORD_LABEL = /^password\b/i;
+
 /** Completes Auth0 Universal Login (identifier + password) on the current page. */
 export async function completeUniversalLogin(page: Page) {
   const { username, password } = credentials();
   await page.waitForURL(/\/u\/login|\/authorize/);
   await page.getByLabel(/email address|username/i).fill(username);
-  await page.getByLabel(/^password$/i).fill(password);
+  await page.getByLabel(PASSWORD_LABEL).fill(password);
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
 }
 
