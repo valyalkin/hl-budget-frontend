@@ -1,0 +1,12 @@
+.next/
+out/
+build/
+coverage/
+playwright-report/
+test-results/
+next-env.d.ts
+pnpm-lock.yaml
+
+# Copied from hl-budget-backend and generated from it: byte-for-byte, never reformatted.
+contracts/
+app/lib/api-schema.d.ts

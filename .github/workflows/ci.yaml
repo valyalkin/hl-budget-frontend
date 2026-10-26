@@ -1,0 +1,97 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Placeholder values so `next build` can load app/lib/env.ts; no real secret is needed to build.
+env:
+  APP_BASE_URL: http://localhost:3000
+  API_BASE_URL: http://localhost:8080
+  AUTH0_DOMAIN: ci.example.auth0.com
+  AUTH0_CLIENT_ID: ci-client-id
+  AUTH0_CLIENT_SECRET: ci-not-a-secret
+  AUTH0_SECRET: 0000000000000000000000000000000000000000000000000000000000000000
+  AUTH0_AUDIENCE: https://api.hl-budget.example
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+      # Types are generated from contracts/api.yaml; a stale file fails the build.
+      - name: api-schema.d.ts is up to date
+        run: pnpm generate:api && git diff --exit-code app/lib/api-schema.d.ts
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Runs against the Auth0 test tenant. Needs a running backend: started from the
+  # hl-budget-backend image with the same tenant settings.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: check
+    if: ${{ vars.E2E_ENABLED == 'true' }}
+    services:
+      postgres:
+        image: postgres:17.7-alpine
+        env:
+          POSTGRES_DB: hl-budget
+          POSTGRES_USER: hl-budget
+          POSTGRES_PASSWORD: hl-budget
+        ports: ['5432:5432']
+    env:
+      AUTH0_DOMAIN: ${{ secrets.E2E_AUTH0_DOMAIN }}
+      AUTH0_CLIENT_ID: ${{ secrets.E2E_AUTH0_CLIENT_ID }}
+      AUTH0_CLIENT_SECRET: ${{ secrets.E2E_AUTH0_CLIENT_SECRET }}
+      AUTH0_SECRET: ${{ secrets.E2E_AUTH0_SECRET }}
+      AUTH0_AUDIENCE: ${{ secrets.E2E_AUTH0_AUDIENCE }}
+      E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the backend
+        run: |
+          docker run -d --name backend --network host \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/hl-budget \
+            -e SPRING_DATASOURCE_USERNAME=hl-budget -e SPRING_DATASOURCE_PASSWORD=hl-budget \
+            -e HLBUDGET_AUTH_ISSUER="https://${AUTH0_DOMAIN}/" \
+            -e HLBUDGET_AUTH_AUDIENCE="${AUTH0_AUDIENCE}" \
+            -e HLBUDGET_AUTH_JWKSETURI="https://${AUTH0_DOMAIN}/.well-known/jwks.json" \
+            -e HLBUDGET_AUTH_CLAIMSNAMESPACE=https://hl-budget/ \
+            ghcr.io/valyalkin/hl-budget-backend:latest
+          timeout 120 sh -c 'until curl -fs localhost:8080/readyz; do sleep 2; done'
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
