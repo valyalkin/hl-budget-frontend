@@ -58,6 +58,135 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/spendings/{spendingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch one of the caller's spendings */
+        get: operations["getSpending"];
+        /** Replace all details of a spending */
+        put: operations["updateSpending"];
+        post?: never;
+        /** Delete a spending permanently */
+        delete: operations["deleteSpending"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/categories/{categoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch one of the caller's categories */
+        get: operations["getCategory"];
+        /**
+         * Rename a custom category
+         * @description Default categories cannot be renamed: 422 with `details.reason = default-category`.
+         */
+        put: operations["renameCategory"];
+        post?: never;
+        /**
+         * Delete a custom category that no spending uses
+         * @description Default categories cannot be deleted: 422 with `details.reason = default-category`.
+         */
+        delete: operations["deleteCategory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/{accountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch one of the caller's accounts */
+        get: operations["getAccount"];
+        /** Rename an account (its name is its only field) */
+        put: operations["renameAccount"];
+        post?: never;
+        /** Delete an account that no spending uses */
+        delete: operations["deleteAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/spendings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's spendings, paged, filtered and sorted
+         * @description Filters are optional and combine with AND; repeating `categoryId` or `accountId` matches any of the given ids. Ties in the sort order are broken by creation time in the same direction, then by id, so paging never skips or repeats a spending.
+         */
+        get: operations["listSpendings"];
+        put?: never;
+        /**
+         * Record a spending
+         * @description Send an `Idempotency-Key` to make retries safe: repeating a create with the same key and the same body returns the first spending with 200 and `Idempotent-Replayed: true` instead of creating another. The key is freed when that spending is deleted.
+         */
+        post: operations["createSpending"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all of the caller's categories, sorted by name, with spending counts
+         * @description On the caller's first budgeting call the 17 default categories are created for them, exactly once, so this never returns an empty list. Not paged: a person has tens of categories.
+         */
+        get: operations["listCategories"];
+        put?: never;
+        /** Create a custom category */
+        post: operations["createCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all of the caller's accounts, sorted by name, with spending counts
+         * @description Not paged: a person has tens of accounts. A new user has none.
+         */
+        get: operations["listAccounts"];
+        put?: never;
+        /** Create an account */
+        post: operations["createAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -137,6 +266,142 @@ export interface components {
              */
             lastSeenAt: string;
         };
+        /** @description An exact amount and its currency */
+        Money: {
+            /**
+             * @description Exact decimal as a string, greater than 0. Responses always carry 2 decimals
+             * @example 84.37
+             */
+            amount: string;
+            /**
+             * @description ISO 4217 code. Must be the app's configured currency
+             * @example CAD
+             */
+            currency: string;
+        };
+        SpendingRequest: {
+            /**
+             * Format: date
+             * @description Today or earlier, in the app's time zone
+             * @example 2026-10-20
+             */
+            date: string;
+            /** @example Loblaws */
+            merchant: string;
+            amount: components["schemas"]["Money"];
+            /**
+             * Format: uuid
+             * @description One of the caller's categories
+             * @example 2c8e4f6a-1b3d-4e5f-9a7b-8c0d1e2f3a55
+             */
+            categoryId: string;
+            /**
+             * Format: uuid
+             * @description One of the caller's accounts
+             * @example 3f1c5a8e-2b7d-4e0a-9c61-0d2f4b8a7e11
+             */
+            accountId: string;
+        };
+        /** @description Another resource's id and current name */
+        Ref: {
+            /** Format: uuid */
+            id: string;
+            /** @example Groceries */
+            name: string;
+        };
+        /** @description One of the caller's spendings */
+        Spending: {
+            /**
+             * Format: uuid
+             * @example 8d3a6b1f-4c2e-4f7a-9b0d-1e2c3a4b5c66
+             */
+            id: string;
+            /**
+             * Format: date
+             * @example 2026-10-20
+             */
+            date: string;
+            /** @example Loblaws */
+            merchant: string;
+            amount: components["schemas"]["Money"];
+            category: components["schemas"]["Ref"];
+            account: components["schemas"]["Ref"];
+            /**
+             * Format: date-time
+             * @example 2026-10-27T14:03:11Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-10-27T14:03:11Z
+             */
+            updatedAt: string;
+        };
+        NameRequest: {
+            /**
+             * @description Trimmed before use; unique per user ignoring case
+             * @example Amex
+             */
+            name: string;
+        };
+        /** @description What the caller's money was spent on */
+        Category: {
+            /**
+             * Format: uuid
+             * @example 2c8e4f6a-1b3d-4e5f-9a7b-8c0d1e2f3a55
+             */
+            id: string;
+            /** @example Groceries */
+            name: string;
+            /**
+             * Format: int64
+             * @description How many of the caller's spendings use this category
+             */
+            readonly spendingCount: number;
+            /** @description True for the 17 categories every user starts with; they cannot be renamed or deleted */
+            readonly isDefault: boolean;
+        };
+        /** @description Where the caller's money was paid from */
+        Account: {
+            /**
+             * Format: uuid
+             * @example 3f1c5a8e-2b7d-4e0a-9c61-0d2f4b8a7e11
+             */
+            id: string;
+            /** @example Amex */
+            name: string;
+            /**
+             * Format: int64
+             * @description How many of the caller's spendings use this account
+             */
+            readonly spendingCount: number;
+        };
+        /** @description One page of the caller's spendings; `items` is empty when nothing matches */
+        SpendingPage: {
+            items: components["schemas"]["Spending"][];
+            /**
+             * Format: int32
+             * @description 0-based page number
+             */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /**
+             * Format: int64
+             * @description Spendings matching the filters, across all pages
+             */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        /** @description All of the caller's categories, sorted by name (never paged) */
+        CategoryList: {
+            items: components["schemas"]["Category"][];
+        };
+        /** @description All of the caller's accounts, sorted by name (never paged) */
+        AccountList: {
+            items: components["schemas"]["Account"][];
+        };
     };
     responses: {
         /** @description Missing, malformed, expired, wrongly signed, wrong-issuer or wrong-audience token. No user data is returned or created. */
@@ -203,12 +468,114 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description The request cannot be read: the body is not JSON, or a path id is not a UUID */
+        BadRequest: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description No such resource for the caller. Also returned for another user's resource, so existence is never revealed */
+        NotFound: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Another of the caller's accounts or categories already has this name, ignoring case (`details.reason = duplicate-name`) */
+        DuplicateName: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description `details.reason` is `duplicate-name` or `concurrent-modification` (re-read and retry) */
+        DuplicateNameOrConcurrent: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Lost a concurrent write; re-read and retry */
+        ConcurrentModification: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Spendings still use this account or category; move or delete them first (`details.reason = in-use`, `details.spendingCount`) */
+        InUse: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Default categories cannot be renamed or deleted (`details.reason = default-category`) */
+        DefaultCategory: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description One or more fields or parameters are invalid; each one is listed in `errors` with a JSON Pointer and a stable `code` */
+        ValidationFailed: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description An invalid field (`errors`), or the category is a default (`details.reason = default-category`) */
+        ValidationOrDefaultCategory: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Invalid fields, each listed in `errors`. Codes include Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture and NotFound (an unknown or another user's category or account). On create only, `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for a different spending */
+        SpendingValidationFailed: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
     parameters: never;
     requestBodies: never;
     headers: {
         /** @description Trace reference for this request; equals `traceId` in any problem body */
         "X-Request-Id": string;
+        /** @description Address of the resource */
+        Location: string;
     };
     pathItems: never;
 }
@@ -310,6 +677,465 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getSpending: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                spendingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The spending */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spending"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    updateSpending: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                spendingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpendingRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spending"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ConcurrentModification"];
+            422: components["responses"]["SpendingValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    deleteSpending: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                spendingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The category */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    renameCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameRequest"];
+            };
+        };
+        responses: {
+            /** @description Renamed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["DuplicateNameOrConcurrent"];
+            422: components["responses"]["ValidationOrDefaultCategory"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    deleteCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["InUse"];
+            422: components["responses"]["DefaultCategory"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    renameAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameRequest"];
+            };
+        };
+        responses: {
+            /** @description Renamed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["DuplicateNameOrConcurrent"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    deleteAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["InUse"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listSpendings: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Earliest date, inclusive
+                 * @example 2026-10-01
+                 */
+                from?: string;
+                /**
+                 * @description Latest date, inclusive; must not be before `from`
+                 * @example 2026-10-31
+                 */
+                to?: string;
+                /** @description Repeatable; matches any of the given categories */
+                categoryId?: string[];
+                /** @description Repeatable; matches any of the given accounts */
+                accountId?: string[];
+                /** @description 0-based page number */
+                page?: number;
+                /** @description Items per page, 1 to 100 */
+                size?: number;
+                /** @description Sort order */
+                sort?: "date,desc" | "date,asc" | "amount,desc" | "amount,asc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page; `items` is empty when nothing matches */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendingPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    createSpending: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional. 1 to 255 visible ASCII characters, unique per create you want deduplicated
+                 * @example 5d1f0c2e-retry-safe
+                 */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpendingRequest"];
+            };
+        };
+        responses: {
+            /** @description A replay of an earlier create with the same Idempotency-Key and body; nothing new was created */
+            200: {
+                headers: {
+                    /** @description Always `true` on a replay */
+                    "Idempotent-Replayed"?: "true";
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spending"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spending"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["SpendingValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All categories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    createCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameRequest"];
+            };
+        };
+        responses: {
+            /** @description Created; `isDefault` is always false */
+            201: {
+                headers: {
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            409: components["responses"]["DuplicateName"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    createAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            409: components["responses"]["DuplicateName"];
+            422: components["responses"]["ValidationFailed"];
             500: components["responses"]["InternalError"];
             503: components["responses"]["ServiceUnavailable"];
         };
