@@ -13,6 +13,8 @@ it('the sitemap lists only the landing page, at the runtime origin', async () =>
 it('robots disallows the signed-in and auth routes', async () => {
   const result = await robots();
   const [rule] = [result.rules].flat();
-  expect(rule?.disallow).toEqual(expect.arrayContaining(['/home', '/auth/']));
+  expect(rule?.disallow).toEqual(
+    expect.arrayContaining(['/spendings', '/home', '/auth/']),
+  );
   expect(result.sitemap).toBe('http://app.test/sitemap.xml');
 });

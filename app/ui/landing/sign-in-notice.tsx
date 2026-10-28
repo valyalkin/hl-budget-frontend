@@ -10,13 +10,3 @@ export default function SignInNotice() {
     </p>
   );
 }
-
-/** Reads searchParams inside <Suspense> so the landing shell stays prerendered. */
-export async function SignInNoticeSection({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const { signin } = await searchParams;
-  return signin === 'failed' ? <SignInNotice /> : null;
-}

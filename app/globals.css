@@ -1,7 +1,43 @@
 @import 'tailwindcss';
 
-/* Design tokens live here, never in component class strings. */
+/* Design tokens live here, never in component class strings (research R-012). */
 @theme {
+  --color-ground: #f3f4ef;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8f9f6;
+  --color-ink: #17191a;
+  --color-ink-2: #3f4541;
+  --color-muted: #5c625e;
+  --color-line: #dde0d8;
+  --color-line-soft: #eceee8;
+  --color-brand: #1e5b45;
+  --color-brand-strong: #123b2c;
+  --color-brand-tint: #e4eee8;
+  --color-error: #a33a16;
+  --color-error-tint: #fbeee8;
+  --color-disabled: #8a908b;
+
+  /*
+   * Category colours for the donut, in rank order. Each is at least 3:1 against white, and
+   * neighbours differ in lightness as well as hue, so adjacent slices stay distinguishable.
+   */
+  --color-cat-1: #1e5b45;
+  --color-cat-2: #c2410c;
+  --color-cat-3: #1d4ed8;
+  --color-cat-4: #a16207;
+  --color-cat-5: #7e22ce;
+  --color-cat-6: #0f766e;
+  --color-cat-7: #be185d;
+  --color-cat-8: #4d7c0f;
+  --color-cat-9: #b91c1c;
+  --color-cat-10: #0369a1;
+  --color-cat-11: #57534e;
+  --color-cat-12: #6d28d9;
+
+  --font-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
   --animate-shimmer: shimmer 2s infinite;
 }
 
@@ -9,4 +45,9 @@
   100% {
     transform: translateX(100%);
   }
+}
+
+/* The native dialog backdrop for Settings. */
+dialog::backdrop {
+  background: rgb(23 25 26 / 0.4);
 }

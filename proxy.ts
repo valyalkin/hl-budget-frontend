@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { auth0 } from '@/app/lib/auth0';
 
-export const PROTECTED_PREFIXES = ['/home'];
+export const PROTECTED_PREFIXES = ['/spendings'];
 
 /** SDK routes that would expose the profile or a token to browser JavaScript (FR-007). */
 const REFUSED_AUTH_ROUTES = ['/auth/profile', '/auth/access-token'];

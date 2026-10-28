@@ -17,22 +17,22 @@ describe('proxy', () => {
     getSession.mockResolvedValue(null);
   });
 
-  it('redirects a signed-out /home?x=1 to login with returnTo and no body', async () => {
-    const response = await proxy(request('/home?x=1'));
+  it('redirects a signed-out /spendings?month=2026-10 to login with returnTo and no body', async () => {
+    const response = await proxy(request('/spendings?month=2026-10'));
 
     expect(response.status).toBe(302);
     expect(response.headers.get('location')).toBe(
-      'http://app.test/auth/login?returnTo=%2Fhome%3Fx%3D1',
+      'http://app.test/auth/login?returnTo=%2Fspendings%3Fmonth%3D2026-10',
     );
     expect(await response.text()).toBe('');
   });
 
-  it('passes a signed-in /home through the SDK response, marked no-store', async () => {
+  it('passes a signed-in /spendings through the SDK response, marked no-store', async () => {
     getSession.mockResolvedValue({ user: { sub: 'auth0|x' } });
     const sdkResponse = NextResponse.next();
     middleware.mockResolvedValueOnce(sdkResponse);
 
-    const response = await proxy(request('/home'));
+    const response = await proxy(request('/spendings'));
 
     expect(response).toBe(sdkResponse);
     expect(response.headers.get('cache-control')).toBe(
@@ -61,8 +61,8 @@ describe('proxy', () => {
     },
   );
 
-  it('does not treat /homepage as protected', async () => {
-    expect((await proxy(request('/homepage'))).status).toBe(200);
+  it('does not treat /spendingsx as protected', async () => {
+    expect((await proxy(request('/spendingsx'))).status).toBe(200);
   });
 
   it('excludes the probes and static assets from the matcher', () => {

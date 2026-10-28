@@ -62,6 +62,57 @@ describe('apiFetch', () => {
     });
   });
 
+  it('exposes the reason, details and field errors of a problem', async () => {
+    server.use(
+      http.put(URL, () =>
+        HttpResponse.json(
+          {
+            type: 'urn:problem:hl-budget:conflict',
+            traceId: 't-409',
+            details: { reason: 'in-use', spendingCount: 3 },
+            errors: [
+              {
+                pointer: '#/date',
+                field: 'date',
+                code: 'NotFuture',
+                message: 'must be today or earlier',
+              },
+              { nonsense: true },
+            ],
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    const error = await apiFetch('/api/v1/users/me', { method: 'PUT' }).catch(
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.reason).toBe('in-use');
+    expect(apiError.details?.spendingCount).toBe(3);
+    expect(apiError.errors).toEqual([
+      {
+        field: 'date',
+        pointer: '#/date',
+        code: 'NotFuture',
+        message: 'must be today or earlier',
+      },
+    ]);
+  });
+
+  it('leaves reason, details and errors undefined when the problem has none', async () => {
+    server.use(
+      http.put(URL, () => HttpResponse.json({ traceId: 'x' }, { status: 404 })),
+    );
+    const error = (await apiFetch('/api/v1/users/me', { method: 'PUT' }).catch(
+      (e: unknown) => e,
+    )) as ApiError;
+    expect(error.reason).toBeUndefined();
+    expect(error.details).toBeUndefined();
+    expect(error.errors).toBeUndefined();
+  });
+
   it('falls back to the X-Request-Id header when the body is not JSON', async () => {
     server.use(
       http.put(
