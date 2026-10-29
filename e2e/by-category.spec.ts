@@ -24,8 +24,12 @@ test.describe('US5: where the month’s money went', () => {
     });
 
     const card = page.getByRole('region', { name: 'By category' });
-    await expect(card.getByRole('rowheader', { name: 'Total' })).toBeVisible();
-    await expect(card.getByRole('cell', { name: 'Groceries' })).toBeVisible();
+    await expect(
+      card.getByRole('rowheader', { name: 'Total', exact: true }),
+    ).toBeVisible();
+    await expect(
+      card.getByRole('cell', { name: 'Groceries', exact: true }),
+    ).toBeVisible();
 
     await card.getByRole('button', { name: 'Pie' }).click();
     await expect(card.getByRole('img')).toBeVisible();

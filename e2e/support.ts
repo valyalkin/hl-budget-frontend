@@ -107,8 +107,9 @@ export async function addSpendingViaUi(page: Page, spending: NewSpending) {
   await expect(page.getByRole('button', { name: 'Save spending' })).toHaveCount(
     0,
   );
+  // The same merchant may already be in the table (a spec can add it twice).
   await expect(
-    page.getByText(spending.merchant, { exact: true }),
+    page.getByText(spending.merchant, { exact: true }).first(),
   ).toBeVisible();
 }
 
