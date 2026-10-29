@@ -1,8 +1,8 @@
-export const DEFAULT_RETURN_TO = '/home';
+export const DEFAULT_RETURN_TO = '/spendings';
 
 /**
  * Where to send a user after sign-in: the requested page only if it is a path on this origin,
- * otherwise /home. Blocks open redirects such as `https://evil`, `//evil`, `/\evil` and
+ * otherwise /spendings. Blocks open redirects such as `https://evil`, `//evil`, `/\evil` and
  * `javascript:` (FR-003, US2-AS4).
  */
 export function safeReturnTo(

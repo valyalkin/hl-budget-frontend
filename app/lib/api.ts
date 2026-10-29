@@ -4,13 +4,20 @@ import { getAccessToken } from '@/app/lib/auth';
 import {
   ApiError,
   ApiUnavailableError,
+  type FieldError,
+  type ProblemExtras,
   UnauthenticatedError,
 } from '@/app/lib/definitions';
 import { env } from '@/app/lib/env';
 
 type ApiPath = `/api/v1/${string}`;
 
-type Problem = { type?: unknown; traceId?: unknown };
+type Problem = {
+  type?: unknown;
+  traceId?: unknown;
+  details?: unknown;
+  errors?: unknown;
+};
 
 async function readProblem(response: Response): Promise<Problem> {
   try {
@@ -22,6 +29,31 @@ async function readProblem(response: Response): Promise<Problem> {
 
 const asString = (value: unknown) =>
   typeof value === 'string' ? value : undefined;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+function asFieldError(value: unknown): FieldError | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const message = asString(value.message);
+  const pointer = asString(value.pointer);
+  const field = asString(value.field) ?? pointer?.replace(/^#\//, '');
+  if (!field || !message) {
+    return undefined;
+  }
+  return { field, pointer, code: asString(value.code), message };
+}
+
+/** The parts of a problem body the UI words messages from; anything malformed is dropped. */
+function extrasOf(problem: Problem): ProblemExtras {
+  const details = isRecord(problem.details) ? problem.details : undefined;
+  const errors = Array.isArray(problem.errors)
+    ? problem.errors.map(asFieldError).filter((e) => e !== undefined)
+    : undefined;
+  return { reason: asString(details?.reason), details, errors };
+}
 
 /**
  * The one fetch wrapper. Server-side only, never cached, aborted after API_TIMEOUT_MS.
@@ -57,7 +89,12 @@ export async function apiFetch<T>(
     if (response.status === 401) {
       throw new UnauthenticatedError(traceId);
     }
-    throw new ApiError(response.status, asString(problem.type), traceId);
+    throw new ApiError(
+      response.status,
+      asString(problem.type),
+      traceId,
+      extrasOf(problem),
+    );
   }
 
   if (response.status === 204) {

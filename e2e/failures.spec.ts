@@ -7,14 +7,16 @@ import { completeUniversalLogin, signIn } from './support';
  * allowed callback URL in the test tenant. Without it that case skips.
  */
 test.describe('US4: failures end in a friendly page or a sign-in redirect', () => {
-  test('a cancelled or denied sign-in lands on the landing page with a notice', async ({
+  test('a cancelled or denied sign-in lands on the signed-out page with a notice', async ({
     page,
   }) => {
     await page.goto('/?signin=failed');
     await expect(page.getByRole('status')).toHaveText(
       'Sign-in did not complete. You can try again.',
     );
-    await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+    await expect(
+      page.getByRole('main').getByRole('link', { name: 'Sign in' }),
+    ).toBeVisible();
   });
 
   test('an Auth0 error on the callback ends on the notice, not a raw error', async ({
@@ -28,13 +30,13 @@ test.describe('US4: failures end in a friendly page or a sign-in redirect', () =
     await expect(page.getByRole('status')).toBeVisible();
   });
 
-  test('an expired session cookie sends the user to sign in and back to /home', async ({
+  test('an expired session cookie sends the user to sign in and back to /spendings', async ({
     page,
     context,
   }) => {
     await signIn(page);
     await context.clearCookies();
-    await page.goto('/home');
+    await page.goto('/spendings');
     await page.waitForURL(/\/u\/login|\/authorize/);
   });
 });
@@ -45,13 +47,13 @@ test.describe('US4: the API is down (web server with API_BASE_URL on a closed po
     'E2E_DOWN_BASE_URL is not set (second web server pointed at a closed API port)',
   );
 
-  test('the home page shows Something went wrong with Try again, no internals', async ({
+  test('the Spendings page shows Something went wrong with Try again, no internals', async ({
     page,
   }) => {
     const base = process.env.E2E_DOWN_BASE_URL ?? '';
     await page.goto(`${base}/auth/login`);
     await completeUniversalLogin(page);
-    await page.waitForURL('**/home');
+    await page.waitForURL('**/spendings**');
 
     await expect(
       page.getByRole('heading', { name: 'Something went wrong' }),

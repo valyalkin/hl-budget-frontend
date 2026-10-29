@@ -1,43 +1,43 @@
 import { expect, test } from '@playwright/test';
-import { completeUniversalLogin, credentials } from './support';
+import { completeUniversalLogin, credentials, MONTH_HEADING } from './support';
 
-test.describe('US1: sign in and see my own profile', () => {
-  test('the landing page shows the name, a description and Sign in', async ({
+test.describe('US7: sign in (feature 003)', () => {
+  test('signed out, / shows the signed-out screen with Sign in', async ({
     page,
   }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle('HL Budget');
+    await expect(page).toHaveTitle('HL-Budget');
     await expect(
-      page.getByRole('heading', { level: 1, name: 'HL Budget' }),
+      page.getByRole('heading', { level: 1, name: "You're signed out" }),
     ).toBeVisible();
-    await expect(page.getByText(/budget for the household/i)).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
-      'href',
-      '/auth/login',
-    );
+    await expect(
+      page.getByText('Sign in to see and record your spendings.'),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('main').getByRole('link', { name: 'Sign in' }),
+    ).toHaveAttribute('href', '/auth/login?returnTo=/spendings');
+    await expect(page.getByRole('table')).toHaveCount(0);
   });
 
-  test('Sign in → Universal Login → /home with greeting, email and avatar (SC-001)', async ({
+  test('Sign in → Universal Login → the Spendings screen for the current month', async ({
     page,
   }) => {
-    const { username } = credentials();
-    const started = Date.now();
-
+    credentials();
     await page.goto('/');
-    await page.getByRole('link', { name: 'Sign in' }).click();
+    await page.getByRole('main').getByRole('link', { name: 'Sign in' }).click();
     await completeUniversalLogin(page);
 
-    await page.waitForURL('**/home');
-    await expect(page.getByRole('heading', { name: /^Hello/ })).toBeVisible();
-    await expect(page.getByText(username)).toBeVisible();
+    await page.waitForURL('**/spendings**');
     await expect(
-      page.locator('section img, section [role="img"]'),
+      page.getByRole('heading', { level: 1, name: MONTH_HEADING }),
     ).toBeVisible();
-    // Loose bound: the 30 s budget is measured properly on the deployed app (quickstart).
-    expect(Date.now() - started).toBeLessThan(30_000);
+    await expect(page.getByRole('link', { name: 'Sign out' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'User settings' }),
+    ).toBeVisible();
   });
 
-  test('two browsers signing in at once both reach /home (SC-002)', async ({
+  test('two browsers signing in at once both reach /spendings (001 SC-002)', async ({
     browser,
   }) => {
     credentials();
@@ -48,18 +48,13 @@ test.describe('US1: sign in and see my own profile', () => {
     const pages = await Promise.all(
       contexts.map((context) => context.newPage()),
     );
-
     await Promise.all(
       pages.map(async (page) => {
         await page.goto('/auth/login');
         await completeUniversalLogin(page);
-        await page.waitForURL('**/home');
-        await expect(
-          page.getByRole('heading', { name: /^Hello/ }),
-        ).toBeVisible();
+        await page.waitForURL('**/spendings**');
       }),
     );
-
     await Promise.all(contexts.map((context) => context.close()));
   });
 });

@@ -44,6 +44,6 @@ describe('onCallback', () => {
     const response = await onCallback(null, {
       returnTo: 'https://evil.example/',
     });
-    expect(response.headers.get('location')).toBe('http://app.test/home');
+    expect(response.headers.get('location')).toBe('http://app.test/spendings');
   });
 });

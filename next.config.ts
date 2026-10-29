@@ -30,6 +30,13 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  // 001's placeholder page is now the Spendings screen (research R-001).
+  async redirects() {
+    return [
+      { source: '/home', destination: '/spendings', permanent: true },
+      { source: '/home/:path*', destination: '/spendings', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

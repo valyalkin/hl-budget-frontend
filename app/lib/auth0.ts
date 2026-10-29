@@ -16,7 +16,7 @@ export const SIGN_IN_FAILED_PATH = '/?signin=failed';
 /**
  * After Auth0 redirects back. A cancelled, denied or failed sign-in lands on the landing page
  * with a notice (FR-006); a success goes to the requested page if it is on this origin, else
- * /home (FR-003). A failure is logged with Auth0's reason, since the notice shows none.
+ * /spendings (FR-003). A failure is logged with Auth0's reason, since the notice shows none.
  */
 export async function onCallback(
   error: unknown,
@@ -56,8 +56,8 @@ export const auth0 = new Auth0Client({
     callback: '/auth/callback',
     logout: '/auth/logout',
   },
-  // Without a returnTo (the landing page's Sign in), land on /home rather than back on /.
-  signInReturnToPath: '/home',
+  // Without a returnTo, land on the Spendings screen rather than back on /.
+  signInReturnToPath: '/spendings',
   onCallback,
   // No token ever reaches browser JavaScript (FR-007). /auth/profile is refused in proxy.ts,
   // since the SDK has no switch for it.

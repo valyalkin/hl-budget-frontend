@@ -67,7 +67,10 @@ export interface paths {
         };
         /** Fetch one of the caller's spendings */
         get: operations["getSpending"];
-        /** Replace all details of a spending */
+        /**
+         * Replace all details of a spending
+         * @description The category and the account are each given by id or by name (exactly one of each pair). A name is matched against the caller's items ignoring case and surrounding spaces, and created in the same transaction when none matches; if the spending is refused, nothing is created.
+         */
         put: operations["updateSpending"];
         post?: never;
         /** Delete a spending permanently */
@@ -114,7 +117,10 @@ export interface paths {
         /** Rename an account (its name is its only field) */
         put: operations["renameAccount"];
         post?: never;
-        /** Delete an account that no spending uses */
+        /**
+         * Delete an account that no spending uses
+         * @description Refused in this order: not found (404), used by spendings (409 `in-use`), the caller's only account (422 `last-account`).
+         */
         delete: operations["deleteAccount"];
         options?: never;
         head?: never;
@@ -136,7 +142,7 @@ export interface paths {
         put?: never;
         /**
          * Record a spending
-         * @description Send an `Idempotency-Key` to make retries safe: repeating a create with the same key and the same body returns the first spending with 200 and `Idempotent-Replayed: true` instead of creating another. The key is freed when that spending is deleted.
+         * @description Send an `Idempotency-Key` to make retries safe: repeating a create with the same key and the same body returns the first spending with 200 and `Idempotent-Replayed: true` instead of creating another. The key is freed when that spending is deleted. The category and the account are each given by id or by name (exactly one of each pair). A name is matched against the caller's items ignoring case and surrounding spaces, and created in the same transaction when none matches; if the spending is refused, nothing is created.
          */
         post: operations["createSpending"];
         delete?: never;
@@ -181,6 +187,66 @@ export interface paths {
         put?: never;
         /** Create an account */
         post: operations["createAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/monthly-totals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's spending total and count for each month of a year
+         * @description Always 12 entries, January to December; a month with no spendings has a zero total and count. `today` is the current date in the app's time zone, so clients can tell which months are in the future without a clock of their own.
+         */
+        get: operations["listMonthlyTotals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/merchants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's past merchants, most used first, for autofill
+         * @description Merchants are derived from spendings, not stored: spendings whose merchant is equal ignoring letter case and surrounding spaces count as one merchant. `name`, `lastCategory` and `lastAccount` come from that merchant's most recent spending. Ordered by `spendingCount` descending, then name.
+         */
+        get: operations["listMerchants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/category-totals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's spending per category over a date range
+         * @description One entry per category with at least one spending in the range, and only those; largest total first, ties by category name. Not paged: bounded by the caller's category count.
+         */
+        get: operations["listCategoryTotals"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -291,16 +357,26 @@ export interface components {
             amount: components["schemas"]["Money"];
             /**
              * Format: uuid
-             * @description One of the caller's categories
+             * @description One of the caller's categories. Give exactly one of categoryId and categoryName
              * @example 2c8e4f6a-1b3d-4e5f-9a7b-8c0d1e2f3a55
              */
-            categoryId: string;
+            categoryId?: string | null;
             /**
              * Format: uuid
-             * @description One of the caller's accounts
+             * @description One of the caller's accounts. Give exactly one of accountId and accountName
              * @example 3f1c5a8e-2b7d-4e0a-9c61-0d2f4b8a7e11
              */
-            accountId: string;
+            accountId?: string | null;
+            /**
+             * @description Instead of categoryId: matched against the caller's categories ignoring case and surrounding spaces, and created when none matches
+             * @example Coffee
+             */
+            categoryName?: string | null;
+            /**
+             * @description Instead of accountId: matched against the caller's accounts ignoring case and surrounding spaces, and created when none matches
+             * @example Visa
+             */
+            accountName?: string | null;
         };
         /** @description Another resource's id and current name */
         Ref: {
@@ -393,6 +469,100 @@ export interface components {
             totalItems: number;
             /** Format: int32 */
             totalPages: number;
+        };
+        /** @description A sum of amounts. Unlike Money it may be zero and has no 8-digit cap. Always 2 decimals */
+        MoneyTotal: {
+            /** @example 2748.42 */
+            amount: string;
+            /**
+             * @description ISO 4217 code: the app's configured currency
+             * @example CAD
+             */
+            currency: string;
+        };
+        /** @description One month's total; zero when nothing was spent */
+        MonthTotal: {
+            /** @example 2026-10 */
+            month: string;
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @example 14
+             */
+            spendingCount: number;
+        };
+        /** @description Every month of a year, January to December */
+        MonthlyTotals: {
+            /**
+             * Format: int32
+             * @example 2026
+             */
+            year: number;
+            /**
+             * Format: date
+             * @description Today in the app's time zone
+             * @example 2026-10-28
+             */
+            today: string;
+            months: components["schemas"]["MonthTotal"][];
+        };
+        /** @description A merchant derived from the caller's spendings */
+        Merchant: {
+            /**
+             * @description Spelling on the most recent spending
+             * @example Neighbourhood Market
+             */
+            name: string;
+            /**
+             * Format: int64
+             * @example 12
+             */
+            spendingCount: number;
+            /**
+             * Format: date
+             * @example 2026-10-27
+             */
+            lastUsedOn: string;
+            /** @description Category of the most recent spending */
+            lastCategory: components["schemas"]["Ref"];
+            /** @description Account of the most recent spending */
+            lastAccount: components["schemas"]["Ref"];
+        };
+        /** @description The caller's merchants, most used first */
+        MerchantList: {
+            items: components["schemas"]["Merchant"][];
+            /** @description True when the caller has more merchants than `limit` */
+            truncated: boolean;
+        };
+        /** @description One category's spending in the range */
+        CategoryTotal: {
+            category: components["schemas"]["Ref"];
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @example 2
+             */
+            spendingCount: number;
+        };
+        /** @description Spending per category over a date range: only categories with spending, largest first */
+        CategoryTotals: {
+            /**
+             * Format: date
+             * @example 2026-10-01
+             */
+            from: string;
+            /**
+             * Format: date
+             * @example 2026-10-31
+             */
+            to: string;
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @example 14
+             */
+            spendingCount: number;
+            items: components["schemas"]["CategoryTotal"][];
         };
         /** @description All of the caller's categories, sorted by name (never paged) */
         CategoryList: {
@@ -528,6 +698,16 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description The caller's only account cannot be deleted; add another account first (`details.reason = last-account`) */
+        LastAccount: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description Default categories cannot be renamed or deleted (`details.reason = default-category`) */
         DefaultCategory: {
             headers: {
@@ -558,7 +738,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Invalid fields, each listed in `errors`. Codes include Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture and NotFound (an unknown or another user's category or account). On create only, `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for a different spending */
+        /** @description Invalid fields, each listed in `errors`. Codes include Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture, NotFound (an unknown or another user's category or account) and ExactlyOne (give exactly one of categoryId and categoryName, and of accountId and accountName). On create only, `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for a different spending */
         SpendingValidationFailed: {
             headers: {
                 "X-Request-Id": components["headers"]["X-Request-Id"];
@@ -935,6 +1115,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["InUse"];
+            422: components["responses"]["LastAccount"];
             500: components["responses"]["InternalError"];
             503: components["responses"]["ServiceUnavailable"];
         };
@@ -1135,6 +1316,98 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             409: components["responses"]["DuplicateName"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listMonthlyTotals: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Calendar year, 2000 to 2100; defaults to the current year
+                 * @example 2026
+                 */
+                year?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Twelve months */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthlyTotals"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listMerchants: {
+        parameters: {
+            query?: {
+                /** @description Maximum number of merchants returned, 1 to 1000 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Merchants; `truncated` is true when more exist than `limit` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MerchantList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listCategoryTotals: {
+        parameters: {
+            query: {
+                /**
+                 * @description Earliest date, inclusive
+                 * @example 2026-10-01
+                 */
+                from: string;
+                /**
+                 * @description Latest date, inclusive; not before `from`, at most 366 days after it
+                 * @example 2026-10-31
+                 */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Totals per category; `items` is empty when nothing was spent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryTotals"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
             422: components["responses"]["ValidationFailed"];
             500: components["responses"]["InternalError"];
             503: components["responses"]["ServiceUnavailable"];

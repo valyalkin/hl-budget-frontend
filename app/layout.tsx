@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import '@/app/globals.css';
-import { inter } from '@/app/ui/fonts';
+import { display, mono, sans } from '@/app/ui/fonts';
 
 export const metadata: Metadata = {
   title: { default: 'HL Budget', template: '%s · HL Budget' },
@@ -14,10 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body
-        className={`${inter.className} min-h-screen bg-slate-50 text-slate-900 antialiased`}
-      >
+    <html
+      lang="en"
+      className={`${display.variable} ${sans.variable} ${mono.variable}`}
+    >
+      <body className="min-h-screen bg-ground font-sans text-ink antialiased">
         {children}
       </body>
     </html>
