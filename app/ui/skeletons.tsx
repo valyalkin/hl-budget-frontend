@@ -8,7 +8,7 @@ export function SpendingsSkeleton() {
       role="status"
       aria-busy="true"
       aria-label="Loading spendings"
-      className={`${shimmer} mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6`}
+      className={`${shimmer} mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6`}
     >
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-12">
         {Array.from({ length: 12 }, (_, i) => (
@@ -16,7 +16,7 @@ export function SpendingsSkeleton() {
         ))}
       </div>
       <div className="h-8 w-48 rounded bg-line" />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
           {Array.from({ length: 6 }, (_, i) => (
             <div key={i} className="h-8 rounded bg-line-soft" />

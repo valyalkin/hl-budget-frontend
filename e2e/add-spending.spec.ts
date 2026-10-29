@@ -4,6 +4,7 @@ import {
   marker,
   removeSpendingsCreatedBy,
   signIn,
+  openEntryRow,
 } from './support';
 
 test.describe('US2: record a spending in the table', () => {
@@ -29,7 +30,7 @@ test.describe('US2: record a spending in the table', () => {
     await expect(page.getByText(`${mark} Shop`)).toBeVisible();
 
     // The new category is now offered in the entry row.
-    await page.getByRole('button', { name: 'Add a spending row' }).click();
+    await openEntryRow(page);
     await page.getByRole('combobox', { name: 'Category' }).click();
     await expect(
       page.getByRole('option', { name: new RegExp(`Cat ${mark}`) }),
@@ -44,7 +45,7 @@ test.describe('US2: record a spending in the table', () => {
     page,
   }) => {
     await signIn(page);
-    await page.getByRole('button', { name: 'Add a spending row' }).click();
+    await openEntryRow(page);
     await page.getByRole('button', { name: 'Save spending' }).click();
     await expect(page.getByText('Add a merchant name.')).toBeVisible();
 

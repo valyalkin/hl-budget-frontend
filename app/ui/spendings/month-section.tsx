@@ -24,12 +24,12 @@ export default async function MonthSection({
   const label = monthLabel(ym);
 
   return (
-    <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
+    <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
       <MonthLine totals={totals} selected={ym} today={today} />
       <h1 className="font-display text-2xl font-bold tracking-tight">
         {label}
       </h1>
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <SpendingsTable
           key={`${ym.year}-${ym.month}`}
           spendings={data.spendings}

@@ -159,6 +159,14 @@ export function monthBounds(ym: YearMonth): { from: string; to: string } {
   };
 }
 
+/**
+ * The date a new spending starts with while `ym` is shown: today in the current month, otherwise
+ * the first of the shown month, so the calendar opens where the user is looking.
+ */
+export function defaultDateFor(ym: YearMonth, today: string): string {
+  return monthParam(ym) === today.slice(0, 7) ? today : monthBounds(ym).from;
+}
+
 /** `"October 2026"`. */
 export function monthLabel({ year, month }: YearMonth): string {
   return `${MONTH_NAMES[month - 1] ?? ''} ${year}`;

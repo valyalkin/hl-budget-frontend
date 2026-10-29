@@ -5,6 +5,7 @@ import {
   marker,
   removeSpendingsCreatedBy,
   signIn,
+  openEntryRow,
 } from './support';
 
 test.describe('US3: fast keyboard entry with autofill', () => {
@@ -25,7 +26,7 @@ test.describe('US3: fast keyboard entry with autofill', () => {
       amount: '6.00',
     });
 
-    await page.getByRole('button', { name: 'Add a spending row' }).click();
+    await openEntryRow(page);
     await page.getByRole('combobox', { name: 'Merchant' }).focus();
     await page.keyboard.type(mark.slice(0, 12));
     await page.keyboard.press('Tab');
@@ -55,7 +56,7 @@ test.describe('US3: fast keyboard entry with autofill', () => {
     page,
   }) => {
     await signIn(page);
-    await page.getByRole('button', { name: 'Add a spending row' }).click();
+    await openEntryRow(page);
     const category = page.getByRole('combobox', { name: 'Category' });
     await category.focus();
     await page.keyboard.type('g');

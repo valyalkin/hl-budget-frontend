@@ -25,10 +25,11 @@ test('the Spendings screen in each of its states', async ({ page }) => {
   await expectAccessible(page, 'plain');
 
   await page.getByRole('button', { name: 'Add a spending row' }).click();
-  await expectAccessible(page, 'entry row open');
-  await page.getByRole('button', { name: /^Date .* Open calendar$/ }).click();
-  await expectAccessible(page, 'calendar open');
+  // A new row opens its calendar by itself.
+  await expect(page.getByRole('dialog', { name: 'Choose date' })).toBeVisible();
+  await expectAccessible(page, 'entry row with calendar open');
   await page.keyboard.press('Escape');
+  await expectAccessible(page, 'entry row open');
   await page.getByRole('combobox', { name: 'Category' }).focus();
   await expectAccessible(page, 'category list open');
   await page.keyboard.press('Escape');

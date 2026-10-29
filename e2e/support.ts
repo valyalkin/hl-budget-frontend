@@ -61,16 +61,28 @@ export type NewSpending = {
 };
 
 /** Adds a spending through the table's entry row and waits for it to be saved. */
+/** Opens a new entry row, whose calendar opens by itself, and closes the calendar. */
+export async function openEntryRow(page: Page) {
+  await page.getByRole('button', { name: 'Add a spending row' }).click();
+  const calendar = page.getByRole('dialog', { name: 'Choose date' });
+  await expect(calendar).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(calendar).toHaveCount(0);
+}
+
 export async function addSpendingViaUi(page: Page, spending: NewSpending) {
   await page.getByRole('button', { name: 'Add a spending row' }).click();
+  // A new row opens its calendar by itself.
+  const calendar = page.getByRole('dialog', { name: 'Choose date' });
   if (spending.previousMonth) {
-    await page.getByRole('button', { name: /^Date .* Open calendar$/ }).click();
-    const calendar = page.getByRole('dialog', { name: 'Choose date' });
     await calendar.getByRole('button', { name: 'Previous month' }).click();
     await calendar
       .getByRole('button', { name: /^[A-Z][a-z]{2} 1, \d{4}$/ })
       .click();
+  } else {
+    await calendar.getByRole('button', { name: 'Today' }).click();
   }
+  await expect(page.getByRole('combobox', { name: 'Merchant' })).toBeFocused();
   await page
     .getByRole('combobox', { name: 'Merchant' })
     .fill(spending.merchant);

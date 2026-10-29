@@ -7,12 +7,14 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   bestCompletion,
   exactMatch,
   rankSuggestions,
   type Suggestible,
 } from '@/app/lib/utils';
+import { FLOATING_START, useFloating } from '@/app/ui/spendings/use-floating';
 
 const MAX_SHOWN = 8;
 
@@ -65,11 +67,13 @@ export default function Combobox({
     end: number;
   } | null>(null);
   const ownRef = useRef<HTMLInputElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   const ranked = rankSuggestions(filter, options).slice(0, MAX_SHOWN);
   const showCreate =
     createHint && value.trim() !== '' && !exactMatch(value, options);
   const expanded = open && (ranked.length > 0 || showCreate);
+  useFloating(expanded, ownRef, listRef, { matchWidth: true });
 
   // Select the autofilled remainder once the new value is in the input.
   useLayoutEffect(() => {
@@ -163,7 +167,7 @@ export default function Combobox({
         aria-label={label}
         aria-autocomplete="both"
         aria-expanded={expanded}
-        aria-controls={listId}
+        aria-controls={expanded ? listId : undefined}
         aria-activedescendant={
           expanded && active >= 0 ? `${listId}-${active}` : undefined
         }
@@ -189,42 +193,53 @@ export default function Combobox({
           invalid ? 'border-error' : 'border-line'
         }`}
       />
-      <div
-        id={listId}
-        role="listbox"
-        aria-label={`${label} suggestions`}
-        hidden={!expanded}
-        className="absolute top-full left-0 z-20 mt-1 max-h-72 w-max min-w-full overflow-auto rounded-lg bg-surface py-1 text-sm shadow-lg ring-1 ring-line"
-      >
-        {ranked.map((option, index) => (
-          <div
-            key={option.name}
-            id={`${listId}-${index}`}
-            role="option"
-            tabIndex={-1}
-            aria-selected={index === active}
-            onMouseDown={(event) => {
-              event.preventDefault();
-              pick(option.name);
-            }}
-            className={`flex cursor-pointer items-center justify-between gap-4 px-3 py-1.5 ${
-              index === active ? 'bg-brand-tint text-brand-strong' : 'text-ink'
-            }`}
-          >
-            <span>{option.name}</span>
-            {option.count > 0 ? (
-              <span className="text-xs text-muted tabular-nums">
-                {option.count}
-              </span>
-            ) : null}
-          </div>
-        ))}
-        {showCreate ? (
-          <div role="presentation" className="px-3 py-1.5 text-xs text-muted">
-            Create “{value.trim()}” on save
-          </div>
-        ) : null}
-      </div>
+      {expanded
+        ? createPortal(
+            <div
+              ref={listRef}
+              id={listId}
+              role="listbox"
+              aria-label={`${label} suggestions`}
+              style={FLOATING_START}
+              className="fixed z-30 max-h-72 w-max overflow-auto rounded-lg bg-surface py-1 text-sm shadow-lg ring-1 ring-line"
+            >
+              {ranked.map((option, index) => (
+                <div
+                  key={option.name}
+                  id={`${listId}-${index}`}
+                  role="option"
+                  tabIndex={-1}
+                  aria-selected={index === active}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    pick(option.name);
+                  }}
+                  className={`flex cursor-pointer items-center justify-between gap-4 px-3 py-1.5 ${
+                    index === active
+                      ? 'bg-brand-tint text-brand-strong'
+                      : 'text-ink'
+                  }`}
+                >
+                  <span>{option.name}</span>
+                  {option.count > 0 ? (
+                    <span className="text-xs text-muted tabular-nums">
+                      {option.count}
+                    </span>
+                  ) : null}
+                </div>
+              ))}
+              {showCreate ? (
+                <div
+                  role="presentation"
+                  className="px-3 py-1.5 text-xs text-muted"
+                >
+                  Create “{value.trim()}” on save
+                </div>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

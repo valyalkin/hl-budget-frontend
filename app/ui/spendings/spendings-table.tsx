@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { deleteSpending } from '@/app/lib/actions';
 import type {
   MerchantOption,
@@ -9,6 +9,7 @@ import type {
   Spending,
 } from '@/app/lib/definitions';
 import {
+  defaultDateFor,
   formatMoney,
   monthLabel,
   monthParam,
@@ -49,6 +50,38 @@ export default function SpendingsTable({
   const [message, setMessage] = useState('');
   const [removing, setRemoving] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  // Enter anywhere on the page opens a new row, as long as nothing has focus (so Enter on a
+  // button, link or field keeps its own meaning) and no dialog such as Settings is open.
+  useEffect(() => {
+    if (open !== null) {
+      return undefined;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      const idle =
+        document.activeElement === null ||
+        document.activeElement === document.body;
+      if (
+        event.key !== 'Enter' ||
+        event.repeat ||
+        event.isComposing ||
+        event.defaultPrevented ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        !idle ||
+        document.querySelector('dialog[open]')
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setMessage('');
+      setOpen({ mode: 'add' });
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
 
   const onSaved = (month: string) => {
     setOpen(null);
@@ -97,14 +130,14 @@ export default function SpendingsTable({
       className="overflow-hidden rounded-2xl bg-surface ring-1 ring-line"
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] table-fixed text-sm">
+        <table className="w-full min-w-[820px] table-fixed text-sm">
           <caption className="sr-only">Spendings in {monthLabel(ym)}</caption>
           <colgroup>
             <col className="w-40" />
             <col />
             <col className="w-40" />
             <col className="w-32" />
-            <col className="w-32" />
+            <col className="w-28" />
             <col className="w-24" />
           </colgroup>
           <thead>
@@ -128,7 +161,8 @@ export default function SpendingsTable({
                 <button
                   type="button"
                   aria-label="Add a spending row"
-                  title="Add a spending row"
+                  title="Add a spending row (Enter)"
+                  aria-keyshortcuts="Enter"
                   disabled={open !== null}
                   onClick={() => {
                     setMessage('');
@@ -159,7 +193,7 @@ export default function SpendingsTable({
               <EntryRow
                 mode="add"
                 initial={{
-                  date: today,
+                  date: defaultDateFor(ym, today),
                   merchant: '',
                   category: '',
                   account: '',

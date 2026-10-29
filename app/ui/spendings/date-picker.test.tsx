@@ -41,6 +41,43 @@ describe('DatePicker', () => {
     ).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('opens outside any clipping container, and a press outside closes it', async () => {
+    render(
+      <div data-testid="clip" style={{ overflow: 'hidden' }}>
+        <Harness />
+      </div>,
+    );
+    await userEvent.click(trigger());
+    const dialog = screen.getByRole('dialog', { name: 'Choose date' });
+    expect(screen.getByTestId('clip')).not.toContainElement(dialog);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Previous month' }),
+    );
+    expect(dialog).toBeInTheDocument();
+    await userEvent.click(document.body);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('can open by itself, and reports a pick but not a close', async () => {
+    const onPicked = vi.fn();
+    render(
+      <DatePicker
+        value="2026-10-28"
+        today="2026-10-28"
+        onChange={() => {}}
+        autoOpen
+        onPicked={onPicked}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Oct 28, 2026' })).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(onPicked).not.toHaveBeenCalled();
+    await userEvent.click(trigger());
+    await userEvent.keyboard('{ArrowLeft}{Enter}');
+    expect(onPicked).toHaveBeenCalledOnce();
+  });
+
   it('does not let days after today be picked, nor go past today’s month', async () => {
     render(<Harness />);
     await userEvent.click(trigger());

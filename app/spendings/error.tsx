@@ -29,7 +29,7 @@ export default function Error({
     });
 
   return (
-    <main className="mx-auto flex max-w-6xl flex-col items-start gap-4 px-4 py-10 sm:px-6">
+    <main className="mx-auto flex max-w-7xl flex-col items-start gap-4 px-4 py-10 sm:px-6">
       <h1 className="font-display text-xl font-bold">Something went wrong</h1>
       <p className="text-muted">{MESSAGES.loadFailed}</p>
       <button

@@ -54,6 +54,35 @@ describe('SpendingsTable', () => {
     expect(screen.getByText('$2,234.37')).toBeInTheDocument();
   });
 
+  it('Enter with nothing focused opens a new row, but not while something has focus', async () => {
+    renderTable();
+    screen.getByRole('button', { name: 'Add a spending row' }).focus();
+    screen.getByRole('button', { name: 'Add a spending row' }).blur();
+    await userEvent.keyboard('{Enter}');
+    expect(
+      screen.getByRole('dialog', { name: 'Choose date' }),
+    ).toBeInTheDocument();
+
+    // Cancelling returns to the page, where Enter opens a row again.
+    await userEvent.keyboard('{Escape}{Escape}');
+    expect(screen.queryByRole('button', { name: 'Save spending' })).toBeNull();
+    await userEvent.keyboard('{Enter}');
+    expect(
+      screen.getByRole('button', { name: 'Save spending' }),
+    ).toBeInTheDocument();
+  });
+
+  it('Enter on a focused control keeps its own meaning', async () => {
+    renderTable();
+    const edit = screen.getAllByRole('button', { name: /^Edit / })[0]!;
+    edit.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(
+      screen.getByRole('button', { name: 'Save changes' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save spending' })).toBeNull();
+  });
+
   it('shows the empty message and no footer for an empty month', () => {
     renderTable([]);
     expect(

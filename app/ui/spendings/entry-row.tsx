@@ -41,10 +41,39 @@ function refFor(text: string, items: readonly NamedItem[]) {
 }
 
 /**
+ * Which way a Left or Right arrow should leave a field: -1, 1, or 0 to stay. A text field is left
+ * only when the cursor is already at that end, or the whole text is selected, so the arrows still
+ * move the cursor inside the text. Any modifier keeps the browser's own behaviour.
+ */
+function arrowStep(event: KeyboardEvent<HTMLElement>): -1 | 0 | 1 {
+  const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key] as
+    -1 | 1 | undefined;
+  if (
+    !step ||
+    event.shiftKey ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey
+  ) {
+    return 0;
+  }
+  const element = event.currentTarget;
+  if (!(element instanceof HTMLInputElement)) {
+    return step;
+  }
+  const { value, selectionStart: start, selectionEnd: end } = element;
+  const whole = start === 0 && end === value.length;
+  const edge = step === 1 ? value.length : 0;
+  return whole || (start === edge && end === edge) ? step : 0;
+}
+
+/**
  * The editable row for adding or editing a spending (US2–US4). Keyboard rules (FR-053–FR-056):
  * Tab moves through date, merchant, category, account, amount; Enter saves when every field is
  * complete and otherwise moves to the next field; Tab or Enter on amount saves, or shows the
- * first problem and focuses it; Escape cancels once no list or calendar is open. Accepting a past
+ * first problem and focuses it; Escape cancels once no list or calendar is open. Left and Right
+ * arrows move to the previous or next field once the cursor is at that end of the text, or the
+ * whole text is selected; a field reached this way has its text selected. Accepting a past
  * merchant fills an empty category and account from its latest spending (FR-058).
  */
 export default function EntryRow({
@@ -129,6 +158,31 @@ export default function EntryRow({
 
   const next = (field: Field) => FIELDS[FIELDS.indexOf(field) + 1];
 
+  /** Left/Right move between fields; returns true when the key was used for that. */
+  const arrowMove = (field: Field, event: KeyboardEvent<HTMLElement>) => {
+    const step = arrowStep(event);
+    const target = step ? FIELDS[FIELDS.indexOf(field) + step] : undefined;
+    if (!target) {
+      return false;
+    }
+    event.preventDefault();
+    const element = refs.current[target];
+    element?.focus();
+    if (element instanceof HTMLInputElement) {
+      element.select();
+    }
+    return true;
+  };
+
+  const onDateKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+    arrowMove('date', event);
+  };
+
   const onFieldKeyDown = (
     field: Field,
     event: KeyboardEvent<HTMLInputElement>,
@@ -136,6 +190,9 @@ export default function EntryRow({
     if (event.key === 'Escape') {
       event.preventDefault();
       onCancel();
+      return;
+    }
+    if (arrowMove(field, event)) {
       return;
     }
     const last = field === 'amount';
@@ -182,6 +239,9 @@ export default function EntryRow({
             value={draft.date}
             today={today}
             onChange={(date) => update({ date })}
+            autoOpen={mode === 'add'}
+            onPicked={() => focus('merchant')}
+            onKeyDown={onDateKeyDown}
             buttonRef={(element) => {
               refs.current.date = element;
             }}
@@ -238,7 +298,7 @@ export default function EntryRow({
             maxLength={50}
           />
         </td>
-        <td className={`${cell} w-32`}>
+        <td className={`${cell} w-28`}>
           <input
             ref={(element) => {
               refs.current.amount = element;

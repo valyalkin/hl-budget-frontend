@@ -9,6 +9,7 @@ import {
   formatMoney,
   isFutureMonth,
   longDate,
+  defaultDateFor,
   monthBounds,
   monthLabel,
   parseAmountInput,
@@ -111,6 +112,18 @@ describe('months and dates', () => {
     });
     expect(monthBounds({ year: 2028, month: 2 }).to).toBe('2028-02-29');
     expect(monthBounds({ year: 2026, month: 12 }).to).toBe('2026-12-31');
+  });
+
+  it('a new spending starts today in the current month, else on the 1st of the shown month', () => {
+    expect(defaultDateFor({ year: 2026, month: 10 }, '2026-10-28')).toBe(
+      '2026-10-28',
+    );
+    expect(defaultDateFor({ year: 2026, month: 8 }, '2026-10-28')).toBe(
+      '2026-08-01',
+    );
+    expect(defaultDateFor({ year: 2025, month: 10 }, '2026-10-28')).toBe(
+      '2025-10-01',
+    );
   });
 
   it('labels months and dates', () => {

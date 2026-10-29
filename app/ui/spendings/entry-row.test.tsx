@@ -95,6 +95,31 @@ describe('EntryRow', () => {
     });
   });
 
+  it('a new row opens its calendar, and picking a day moves on to Merchant', async () => {
+    renderRow();
+    expect(
+      screen.getByRole('dialog', { name: 'Choose date' }),
+    ).toBeInTheDocument();
+    await userEvent.keyboard('{ArrowLeft}{Enter}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(field('Merchant')).toHaveFocus();
+  });
+
+  it('editing does not open the calendar', () => {
+    renderRow({
+      mode: 'edit',
+      spendingId: ids.spending1,
+      initial: {
+        date: TODAY,
+        merchant: 'Bakery',
+        category: 'Gifts',
+        account: 'Visa',
+        amount: '3',
+      },
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('never overwrites a category already chosen, and fills nothing for a new merchant', async () => {
     renderRow({
       initial: {
@@ -128,6 +153,45 @@ describe('EntryRow', () => {
     await userEvent.keyboard('gro{Enter}');
     expect(field('Account')).toHaveFocus();
     expect(saveSpending).not.toHaveBeenCalled();
+  });
+
+  it('Left and Right arrows move between fields at the ends of the text', async () => {
+    renderRow({
+      initial: {
+        date: TODAY,
+        merchant: 'Bakery',
+        category: '',
+        account: '',
+        amount: '',
+      },
+    });
+    await userEvent.keyboard('{Escape}');
+    const date = screen.getByRole('button', { name: /^Date / });
+    expect(date).toHaveFocus();
+    await userEvent.keyboard('{ArrowRight}');
+    // Arriving selects the whole text, so another Right moves on again.
+    expect(field('Merchant')).toHaveFocus();
+    expect(field('Merchant').selectionEnd).toBe(6);
+    await userEvent.keyboard('{ArrowRight}');
+    expect(field('Category')).toHaveFocus();
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(field('Merchant')).toHaveFocus();
+
+    // Inside the text the arrows move the cursor, and leave only at the start.
+    field('Merchant').setSelectionRange(3, 3);
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(field('Merchant')).toHaveFocus();
+    field('Merchant').setSelectionRange(0, 0);
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(date).toHaveFocus();
+  });
+
+  it('Escape on the date field cancels the row once the calendar is closed', async () => {
+    const { onCancel } = renderRow();
+    await userEvent.keyboard('{Escape}');
+    expect(onCancel).not.toHaveBeenCalled();
+    await userEvent.keyboard('{Escape}');
+    expect(onCancel).toHaveBeenCalledOnce();
   });
 
   it('Shift+Tab goes back', async () => {

@@ -52,6 +52,18 @@ describe('Combobox', () => {
     ]);
   });
 
+  it('opens its list outside any clipping container', async () => {
+    render(
+      <div data-testid="clip" style={{ overflow: 'hidden' }}>
+        <Harness />
+      </div>,
+    );
+    await userEvent.click(input());
+    const list = screen.getByRole('listbox', { name: 'Category suggestions' });
+    expect(screen.getByTestId('clip')).not.toContainElement(list);
+    expect(input()).toHaveAttribute('aria-controls', list.id);
+  });
+
   it('autofills the most used prefix match with the rest selected', async () => {
     render(<Harness />);
     await userEvent.type(input(), 'g');
