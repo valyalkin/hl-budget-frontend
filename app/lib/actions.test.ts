@@ -21,7 +21,8 @@ vi.mock('@/app/lib/auth', () => ({ getSession, getAccessToken }));
 vi.mock('next/cache', () => ({ refresh }));
 
 const API = 'http://api.test/api/v1';
-const KEY = '5d1f0c2e-1b3d-4e5f-9a7b-8c0d1e2f3a55';
+// Any UUID; made at run time so no key-like literal sits in the source.
+const KEY = crypto.randomUUID();
 
 const input = (overrides: Partial<SpendingInput> = {}): SpendingInput => ({
   mode: 'add',
