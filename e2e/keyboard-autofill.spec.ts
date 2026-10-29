@@ -15,6 +15,9 @@ test.describe('US3: fast keyboard entry with autofill', () => {
     const mark = marker('kbd');
     const merchant = `${mark} Grocer`;
     await signIn(page);
+    // Clear this spec's leftovers from earlier runs that failed before their cleanup: their
+    // merchants share the marker's prefix and would be suggested instead of this run's.
+    await removeSpendingsCreatedBy(page, 'e2e-kbd-');
     await addSpendingViaUi(page, {
       merchant,
       category: 'Groceries',
@@ -28,7 +31,8 @@ test.describe('US3: fast keyboard entry with autofill', () => {
 
     await openEntryRow(page);
     await page.getByRole('combobox', { name: 'Merchant' }).focus();
-    await page.keyboard.type(mark.slice(0, 12));
+    // The whole marker, so only this run's merchant matches; autofill adds " Grocer".
+    await page.keyboard.type(mark);
     await page.keyboard.press('Tab');
     await expect(page.getByRole('combobox', { name: 'Merchant' })).toHaveValue(
       merchant,
