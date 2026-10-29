@@ -17,7 +17,7 @@ test.describe('US6: manage categories and accounts', () => {
     await page.getByRole('button', { name: 'User settings' }).click();
     const dialog = page.getByRole('dialog', { name: 'Settings' });
     await dialog.getByRole('textbox', { name: 'New category' }).fill(name);
-    await dialog.getByRole('button', { name: 'Add' }).click();
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(
       dialog.getByRole('button', { name: `Remove ${name}` }),
     ).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('US6: manage categories and accounts', () => {
     await dialog
       .getByRole('textbox', { name: 'New category' })
       .fill(name.toUpperCase());
-    await dialog.getByRole('button', { name: 'Add' }).click();
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(
       dialog.getByText(`“${name.toUpperCase()}” already exists.`),
     ).toBeVisible();

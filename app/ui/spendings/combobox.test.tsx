@@ -133,6 +133,24 @@ describe('Combobox', () => {
     expect(input().value).toBe('Rent');
   });
 
+  it('a value filled from outside while focused is selected, so typing replaces it', async () => {
+    const field = (value: string) => (
+      <Combobox
+        label="Category"
+        value={value}
+        onChange={() => {}}
+        options={options}
+      />
+    );
+    const { rerender } = render(field(''));
+    await userEvent.click(input());
+    // Accepting a past merchant fills the category after focus has already arrived.
+    rerender(field('Groceries'));
+    expect(input()).toHaveFocus();
+    expect(input().selectionStart).toBe(0);
+    expect(input().selectionEnd).toBe(9);
+  });
+
   it('a click on an option picks it', async () => {
     render(<Harness />);
     await userEvent.click(input());

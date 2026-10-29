@@ -67,6 +67,8 @@ export default function Combobox({
     end: number;
   } | null>(null);
   const ownRef = useRef<HTMLInputElement | null>(null);
+  // The last text this field set itself; any other new value came from outside (FR-058's fill).
+  const ownValue = useRef(value);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const ranked = rankSuggestions(filter, options).slice(0, MAX_SHOWN);
@@ -74,6 +76,26 @@ export default function Combobox({
     createHint && value.trim() !== '' && !exactMatch(value, options);
   const expanded = open && (ranked.length > 0 || showCreate);
   useFloating(expanded, ownRef, listRef, { matchWidth: true });
+
+  // A value filled in from outside while the field has focus (accepting a past merchant fills
+  // category and account) is selected, so typing replaces it rather than adding to it. Without
+  // this, focus can arrive before the filled value and leave the cursor after it.
+  useLayoutEffect(() => {
+    const input = ownRef.current;
+    if (value === ownValue.current) {
+      return;
+    }
+    ownValue.current = value;
+    if (input && input === document.activeElement) {
+      input.select();
+    }
+  }, [value]);
+
+  /** Every change this field makes itself goes through here. */
+  const emit = (text: string) => {
+    ownValue.current = text;
+    onChange(text);
+  };
 
   // Select the autofilled remainder once the new value is in the input.
   useLayoutEffect(() => {
@@ -97,7 +119,7 @@ export default function Combobox({
   const accept = (text: string) => {
     const spelled = exactMatch(text, options)?.name ?? text;
     if (spelled !== text) {
-      onChange(spelled);
+      emit(spelled);
     }
     const input = ownRef.current;
     if (input) {
@@ -116,10 +138,10 @@ export default function Combobox({
       : bestCompletion(text, rankSuggestions(text, options));
     if (best) {
       // Keep what the user typed as typed; only the rest comes from the suggestion.
-      onChange(text + best.name.slice(text.length));
+      emit(text + best.name.slice(text.length));
       setSelection({ start: text.length, end: best.name.length });
     } else {
-      onChange(text);
+      emit(text);
     }
   };
 
@@ -143,7 +165,7 @@ export default function Combobox({
     if (event.key === 'Enter' || event.key === 'Tab') {
       const picked = expanded && active >= 0 ? ranked[active] : undefined;
       if (picked) {
-        onChange(picked.name);
+        emit(picked.name);
         accept(picked.name);
       } else {
         accept(value);
@@ -153,7 +175,7 @@ export default function Combobox({
   };
 
   const pick = (name: string) => {
-    onChange(name);
+    emit(name);
     setFilter(name);
     accept(name);
   };

@@ -24,8 +24,16 @@ export const PASSWORD_LABEL = /^password\b/i;
 export async function completeUniversalLogin(page: Page) {
   const { username, password } = credentials();
   await page.waitForURL(/\/u\/login|\/authorize/);
-  await page.getByLabel(/email address|username/i).fill(username);
-  await page.getByLabel(PASSWORD_LABEL).fill(password);
+  const identifier = page.getByLabel(/email address|username/i);
+  const secret = page.getByLabel(PASSWORD_LABEL);
+  // Auth0's page can still be settling when it first shows, and a fill can then land in the wrong
+  // field. Fill both, check both, and retry until they hold.
+  await expect(async () => {
+    await identifier.fill(username);
+    await secret.fill(password);
+    await expect(identifier).toHaveValue(username, { timeout: 1_000 });
+    await expect(secret).toHaveValue(password, { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
 }
 
