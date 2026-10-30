@@ -24,16 +24,17 @@ type ImportState = {
   /** Changes each time a file is read, so the review starts fresh (US4 #3). */
   session: number;
   notice: string | null;
-  rowOpen: boolean;
 };
 
 export type ImportContextValue = ImportState & {
+  rowOpen: boolean;
   open: (lookups: ImportLookups) => void;
   close: () => void;
   toPick: () => void;
   toReview: (fileName: string, rows: ImportRow[]) => void;
   finish: (notice: string) => void;
   dismissNotice: () => void;
+  /** Stable across renders (a state setter), so effects can depend on it safely. */
   setRowOpen: (open: boolean) => void;
 };
 
@@ -60,7 +61,6 @@ const CLOSED: ImportState = {
   rows: [],
   session: 0,
   notice: null,
-  rowOpen: false,
 };
 
 /**
@@ -70,9 +70,12 @@ const CLOSED: ImportState = {
  */
 export default function ImportProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ImportState>(CLOSED);
+  const [rowOpen, setRowOpen] = useState(false);
 
   const value: ImportContextValue = {
     ...state,
+    rowOpen,
+    setRowOpen,
     open: (lookups) =>
       setState((s) => ({
         ...s,
@@ -103,8 +106,6 @@ export default function ImportProvider({ children }: { children: ReactNode }) {
         notice,
       })),
     dismissNotice: () => setState((s) => ({ ...s, notice: null })),
-    setRowOpen: (rowOpen) =>
-      setState((s) => (s.rowOpen === rowOpen ? s : { ...s, rowOpen })),
   };
 
   return (
