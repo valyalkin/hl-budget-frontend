@@ -1,6 +1,11 @@
 'use client';
 
-import { type RefObject, useLayoutEffect } from 'react';
+import {
+  createContext,
+  type RefObject,
+  useContext,
+  useLayoutEffect,
+} from 'react';
 
 /** Gap between the field and its popup, and the least distance kept from the window's edge. */
 const GAP = 4;
@@ -73,3 +78,20 @@ export const FLOATING_START = {
   left: 0,
   visibility: 'hidden',
 } as const;
+
+/**
+ * Where floating popups are portalled. A modal `<dialog>` (the CSV import) is in the browser's top
+ * layer and makes the rest of the page inert, so a popup portalled to the body would be hidden
+ * behind it and unclickable. Such a dialog provides itself here; fixed coordinates still work
+ * inside it because it has no transform (specs/004-csv-import FR-025).
+ */
+export const FloatingRoot = createContext<HTMLElement | null>(null);
+
+/**
+ * The element to portal a popup into: the enclosing dialog's, else the page body (null while
+ * rendering on the server, where popups are never open).
+ */
+export function useFloatingRoot(): HTMLElement | null {
+  const root = useContext(FloatingRoot);
+  return root ?? (typeof document === 'undefined' ? null : document.body);
+}

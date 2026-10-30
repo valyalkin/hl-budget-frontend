@@ -13,6 +13,11 @@ import type { MerchantOption, NamedItem } from '@/app/lib/definitions';
 import { type Draft, draftProblem, type Field, FIELDS } from '@/app/lib/draft';
 import { exactMatch } from '@/app/lib/utils';
 import Combobox from '@/app/ui/spendings/combobox';
+import {
+  arrowStep,
+  merchantFillIn,
+  nextField,
+} from '@/app/ui/spendings/row-keys';
 import DatePicker from '@/app/ui/spendings/date-picker';
 
 export type EntryRowProps = {
@@ -38,33 +43,6 @@ const iconButton =
 function refFor(text: string, items: readonly NamedItem[]) {
   const match = exactMatch(text, items);
   return match ? { id: match.id } : { name: text.trim() };
-}
-
-/**
- * Which way a Left or Right arrow should leave a field: -1, 1, or 0 to stay. A text field is left
- * only when the cursor is already at that end, or the whole text is selected, so the arrows still
- * move the cursor inside the text. Any modifier keeps the browser's own behaviour.
- */
-function arrowStep(event: KeyboardEvent<HTMLElement>): -1 | 0 | 1 {
-  const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key] as
-    -1 | 1 | undefined;
-  if (
-    !step ||
-    event.shiftKey ||
-    event.altKey ||
-    event.ctrlKey ||
-    event.metaKey
-  ) {
-    return 0;
-  }
-  const element = event.currentTarget;
-  if (!(element instanceof HTMLInputElement)) {
-    return step;
-  }
-  const { value, selectionStart: start, selectionEnd: end } = element;
-  const whole = start === 0 && end === value.length;
-  const edge = step === 1 ? value.length : 0;
-  return whole || (start === edge && end === edge) ? step : 0;
 }
 
 /**
@@ -156,12 +134,10 @@ export default function EntryRow({
     });
   };
 
-  const next = (field: Field) => FIELDS[FIELDS.indexOf(field) + 1];
-
   /** Left/Right move between fields; returns true when the key was used for that. */
   const arrowMove = (field: Field, event: KeyboardEvent<HTMLElement>) => {
     const step = arrowStep(event);
-    const target = step ? FIELDS[FIELDS.indexOf(field) + step] : undefined;
+    const target = step ? nextField(field, step) : undefined;
     if (!target) {
       return false;
     }
@@ -201,7 +177,7 @@ export default function EntryRow({
       (event.key === 'Tab' && !event.shiftKey && last)
     ) {
       event.preventDefault();
-      const following = next(field);
+      const following = nextField(field, 1);
       if (last || !draftProblem(latest.current, today) || !following) {
         save();
       } else {
@@ -211,17 +187,7 @@ export default function EntryRow({
   };
 
   const fillFromMerchant = (text: string) => {
-    const merchant = exactMatch(text, merchants);
-    if (!merchant) {
-      return;
-    }
-    const patch: Partial<Draft> = {};
-    if (!latest.current.category.trim()) {
-      patch.category = merchant.lastCategory.name;
-    }
-    if (!latest.current.account.trim()) {
-      patch.account = merchant.lastAccount.name;
-    }
+    const patch = merchantFillIn(latest.current, text, merchants);
     if (Object.keys(patch).length > 0) {
       update(patch);
     }

@@ -2,7 +2,11 @@
 
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FLOATING_START, useFloating } from '@/app/ui/spendings/use-floating';
+import {
+  FLOATING_START,
+  useFloating,
+  useFloatingRoot,
+} from '@/app/ui/spendings/use-floating';
 import {
   addMonths,
   calendarWeeks,
@@ -38,6 +42,9 @@ export default function DatePicker({
   autoOpen = false,
   onPicked,
   onKeyDown,
+  name = 'Date',
+  invalid = false,
+  describedBy,
 }: {
   value: string;
   today: string;
@@ -49,6 +56,14 @@ export default function DatePicker({
   onPicked?: () => void;
   /** Keys pressed on the field itself (not inside the calendar), for the row to handle. */
   onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
+  /** How the field is named before its date, e.g. `Date, row 3,` in the import review. */
+  name?: string;
+  /**
+   * Marks the field as needing attention with the error border. A button cannot carry
+   * `aria-invalid`, so the reason reaches assistive technology through `describedBy`.
+   */
+  invalid?: boolean;
+  describedBy?: string;
 }) {
   const titleId = useId();
   const [open, setOpen] = useState(autoOpen);
@@ -60,6 +75,7 @@ export default function DatePicker({
   const panel = useRef<HTMLDivElement | null>(null);
 
   useFloating(open, trigger, panel);
+  const floatingRoot = useFloatingRoot();
 
   // A press anywhere outside the field and its calendar closes the calendar.
   useEffect(() => {
@@ -154,10 +170,13 @@ export default function DatePicker({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label={`Date ${label}. Open calendar`}
+        aria-label={`${name} ${label}. Open calendar`}
+        aria-describedby={describedBy}
         onClick={() => (open ? close() : openCalendar())}
         onKeyDown={onKeyDown}
-        className="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-line bg-surface px-2.5 text-sm whitespace-nowrap focus-visible:outline-2 focus-visible:outline-brand"
+        className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border bg-surface px-2.5 text-sm whitespace-nowrap focus-visible:outline-2 focus-visible:outline-brand ${
+          invalid ? 'border-error' : 'border-line'
+        }`}
       >
         <span>{label}</span>
         <svg
@@ -184,7 +203,7 @@ export default function DatePicker({
           />
         </svg>
       </button>
-      {open
+      {open && floatingRoot
         ? createPortal(
             <div
               ref={panel}
@@ -325,7 +344,7 @@ export default function DatePicker({
                 </button>
               </div>
             </div>,
-            document.body,
+            floatingRoot,
           )
         : null}
     </div>

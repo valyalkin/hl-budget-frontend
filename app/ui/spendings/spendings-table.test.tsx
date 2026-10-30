@@ -2,6 +2,9 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ids, spendings, TODAY } from '@/mocks/fixtures';
+import ImportCsvButton from '@/app/ui/import/import-csv-button';
+import ImportProvider from '@/app/ui/import/import-provider';
+import { lookups } from '@/app/ui/import/test-support';
 import SpendingsTable from '@/app/ui/spendings/spendings-table';
 
 const { deleteSpending, saveSpending, push, replace } = vi.hoisted(() => ({
@@ -11,7 +14,9 @@ const { deleteSpending, saveSpending, push, replace } = vi.hoisted(() => ({
   replace: vi.fn(),
 }));
 vi.mock('@/app/lib/actions', () => ({ deleteSpending, saveSpending }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push, replace }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push, replace, refresh: vi.fn() }),
+}));
 
 function renderTable(rows = spendings) {
   render(
@@ -199,5 +204,37 @@ describe('SpendingsTable', () => {
       screen.getByRole('button', { name: 'Remove Rent — Unit 4B on Oct 1' }),
     );
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/'));
+  });
+});
+
+describe('SpendingsTable and the CSV import', () => {
+  it('makes Import CSV unavailable while a row is open', async () => {
+    render(
+      <ImportProvider>
+        <ImportCsvButton lookups={lookups} />
+        <SpendingsTable
+          spendings={spendings}
+          monthTotal={{ amount: '2234.37', currency: 'CAD' }}
+          ym={{ year: 2026, month: 10 }}
+          today={TODAY}
+          currency="CAD"
+          categories={[{ id: ids.groceries, name: 'Groceries', count: 10 }]}
+          accounts={[{ id: ids.visa, name: 'Visa', count: 12 }]}
+          merchants={[]}
+        />
+      </ImportProvider>,
+    );
+    const importButton = screen.getByRole('button', { name: 'Import CSV' });
+    expect(importButton).toBeEnabled();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add a spending row' }),
+    );
+    expect(importButton).toBeDisabled();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Cancel new spending' }),
+    );
+    expect(importButton).toBeEnabled();
   });
 });

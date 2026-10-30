@@ -83,6 +83,11 @@ export type CategoryTotal = Schemas['CategoryTotal'];
 export type Merchant = Schemas['Merchant'];
 export type MerchantList = Schemas['MerchantList'];
 
+/** Feature 004: generated aliases for the CSV import. */
+export type SpendingImport = Schemas['SpendingImport'];
+export type SpendingImportRequest = Schemas['SpendingImportRequest'];
+export type SpendingImportRow = Schemas['SpendingImportRow'];
+
 /** A category or account as the entry row and Settings need it. */
 export type NamedItem = { id: string; name: string; count: number };
 

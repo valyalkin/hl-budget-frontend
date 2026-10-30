@@ -1,5 +1,6 @@
 import { loadSpendingsPage } from '@/app/lib/data';
 import { monthLabel, toCents } from '@/app/lib/utils';
+import ImportCsvButton from '@/app/ui/import/import-csv-button';
 import ByCategoryCard from '@/app/ui/spendings/by-category-card';
 import MonthLine from '@/app/ui/spendings/month-line';
 import MonthTotalCard from '@/app/ui/spendings/month-total-card';
@@ -22,6 +23,17 @@ export default async function MonthSection({
   const monthTotal = totals.months[ym.month - 1];
   const currency = monthTotal?.total.currency ?? 'CAD';
   const label = monthLabel(ym);
+  const categories = data.categories.map(({ id, name, count }) => ({
+    id,
+    name,
+    count,
+  }));
+  const merchants = data.merchants.items.map((m) => ({
+    name: m.name,
+    count: m.spendingCount,
+    lastCategory: m.lastCategory,
+    lastAccount: m.lastAccount,
+  }));
 
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
@@ -37,20 +49,20 @@ export default async function MonthSection({
           ym={ym}
           today={today}
           currency={currency}
-          categories={data.categories.map(({ id, name, count }) => ({
-            id,
-            name,
-            count,
-          }))}
+          categories={categories}
           accounts={data.accounts}
-          merchants={data.merchants.items.map((m) => ({
-            name: m.name,
-            count: m.spendingCount,
-            lastCategory: m.lastCategory,
-            lastAccount: m.lastAccount,
-          }))}
+          merchants={merchants}
         />
         <aside aria-label="Month summary" className="flex flex-col gap-6">
+          <ImportCsvButton
+            lookups={{
+              categories,
+              accounts: data.accounts,
+              merchants,
+              today,
+              currency,
+            }}
+          />
           <MonthTotalCard
             label={label}
             total={monthTotal?.total ?? { amount: '0.00', currency }}

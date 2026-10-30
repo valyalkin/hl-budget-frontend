@@ -8,6 +8,8 @@ import {
   deleteAccount,
   deleteCategory,
   deleteSpending,
+  type ImportInput,
+  importSpendings,
   saveSpending,
   type SpendingInput,
 } from '@/app/lib/actions';
@@ -282,6 +284,227 @@ describe('categories and accounts', () => {
       deleteAccount({ id: ids.cash, name: 'Cash' }),
     ).resolves.toMatchObject({
       message: 'You need at least one account.',
+    });
+  });
+});
+
+describe('importSpendings', () => {
+  const draft = (overrides: Record<string, string> = {}) => ({
+    date: '2026-10-20',
+    merchant: ' Corner Bakery ',
+    category: ' Groceries ',
+    account: 'Visa',
+    amount: '12.4',
+    ...overrides,
+  });
+  const importInput = (overrides: Partial<ImportInput> = {}): ImportInput => ({
+    rows: [
+      { key: 'r1', draft: draft() },
+      { key: 'r2', draft: draft({ date: '2026-09-30', amount: '61.20' }) },
+    ],
+    idempotencyKey: KEY,
+    today: TODAY,
+    currency: 'CAD',
+    ...overrides,
+  });
+  const receipt = {
+    id: '9b2f6e1a-4c3d-4e5f-8a7b-0c1d2e3f4a5b',
+    spendingCount: 2,
+    firstDate: '2026-09-30',
+    lastDate: '2026-10-20',
+    total: { amount: '73.60', currency: 'CAD' },
+    createdAt: '2026-10-28T14:03:11Z',
+  };
+  const problem = (extras: object) =>
+    HttpResponse.json(
+      {
+        type: 'urn:problem:hl-budget:unprocessable-entity',
+        status: 422,
+        traceId: 't',
+        ...extras,
+      },
+      { status: 422 },
+    );
+
+  it('imports with one POST carrying the key, then refreshes and gives the latest month', async () => {
+    const seen = record('post', '/spending-imports', () =>
+      HttpResponse.json(receipt, { status: 201 }),
+    );
+
+    const result = await importSpendings(importInput());
+
+    expect(result).toEqual({ status: 'ok', month: '2026-10', count: 2 });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.key).toBe(KEY);
+    expect(seen[0]?.body).toEqual({
+      spendings: [
+        {
+          date: '2026-10-20',
+          merchant: 'Corner Bakery',
+          amount: { amount: '12.40', currency: 'CAD' },
+          categoryName: 'Groceries',
+          accountName: 'Visa',
+        },
+        {
+          date: '2026-09-30',
+          merchant: 'Corner Bakery',
+          amount: { amount: '61.20', currency: 'CAD' },
+          categoryName: 'Groceries',
+          accountName: 'Visa',
+        },
+      ],
+    });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('refuses invalid rows locally, without a request', async () => {
+    const seen = record('post', '/spending-imports', () =>
+      HttpResponse.json(receipt, { status: 201 }),
+    );
+
+    const result = await importSpendings(
+      importInput({
+        rows: [
+          { key: 'r1', draft: draft() },
+          { key: 'r2', draft: draft({ category: '', amount: '0' }) },
+        ],
+      }),
+    );
+
+    expect(result).toEqual({
+      status: 'error',
+      message: '1 row needs attention',
+      rowErrors: [
+        { row: 1, field: 'category', message: 'Choose or type a category.' },
+        {
+          row: 1,
+          field: 'amount',
+          message: 'Enter an amount greater than zero.',
+        },
+      ],
+    });
+    expect(seen).toHaveLength(0);
+  });
+
+  it('refuses malformed input without a request', async () => {
+    const seen = record('post', '/spending-imports', () =>
+      HttpResponse.json(receipt, { status: 201 }),
+    );
+    const many = Array.from({ length: 1001 }, (_, i) => ({
+      key: `r${i}`,
+      draft: draft(),
+    }));
+
+    await expect(
+      importSpendings(importInput({ rows: many })),
+    ).resolves.toMatchObject({ status: 'error' });
+    await expect(
+      importSpendings(importInput({ idempotencyKey: 'not-a-uuid' })),
+    ).resolves.toMatchObject({ status: 'error' });
+    await expect(
+      importSpendings(importInput({ rows: [] })),
+    ).resolves.toMatchObject({ status: 'error' });
+    expect(seen).toHaveLength(0);
+  });
+
+  it("maps the server's row pointers back to rows and fields", async () => {
+    record('post', '/spending-imports', () =>
+      problem({
+        errors: [
+          {
+            pointer: '#/spendings/1/date',
+            field: 'spendings[1].date',
+            code: 'NotFuture',
+            message: 'must be today or earlier',
+          },
+          {
+            pointer: '#/spendings/0/amount/amount',
+            field: 'spendings[0].amount.amount',
+            code: 'Positive',
+            message: 'must be greater than 0',
+          },
+          {
+            pointer: '#/spendings/1/categoryName',
+            field: 'spendings[1].categoryName',
+            code: 'Size',
+            message: 'must be at most 50 characters',
+          },
+          {
+            pointer: '#/spendings/0/accountName',
+            field: 'spendings[0].accountName',
+            code: 'NotBlank',
+            message: 'must not be blank',
+          },
+        ],
+      }),
+    );
+
+    const result = await importSpendings(importInput());
+
+    expect(result).toEqual({
+      status: 'error',
+      message: '2 rows need attention',
+      rowErrors: [
+        {
+          row: 1,
+          field: 'date',
+          message: 'Pick a date that is today or earlier.',
+        },
+        {
+          row: 0,
+          field: 'amount',
+          message: 'Enter an amount greater than zero.',
+        },
+        { row: 1, field: 'category', message: 'Choose or type a category.' },
+        { row: 0, field: 'account', message: 'Choose or type an account.' },
+      ],
+    });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('treats a reused key as an import that was already saved', async () => {
+    record('post', '/spending-imports', () =>
+      problem({ details: { reason: 'idempotency-key-reused' } }),
+    );
+
+    await expect(importSpendings(importInput())).resolves.toEqual({
+      status: 'already-imported',
+    });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('says the server could not be reached, without row errors', async () => {
+    server.use(
+      http.post(`${API}/spending-imports`, () => HttpResponse.error()),
+    );
+    await expect(importSpendings(importInput())).resolves.toEqual({
+      status: 'error',
+      message: 'Couldn’t reach the server. Your changes weren’t saved.',
+    });
+
+    server.use(
+      http.post(`${API}/spending-imports`, () =>
+        HttpResponse.json({}, { status: 503 }),
+      ),
+    );
+    await expect(importSpendings(importInput())).resolves.toEqual({
+      status: 'error',
+      message: 'Couldn’t reach the server. Your changes weren’t saved.',
+    });
+  });
+
+  it('reports a lost session as signed-out', async () => {
+    getSession.mockResolvedValueOnce(null);
+    await expect(importSpendings(importInput())).resolves.toEqual({
+      status: 'signed-out',
+    });
+    server.use(
+      http.post(`${API}/spending-imports`, () =>
+        HttpResponse.json({}, { status: 401 }),
+      ),
+    );
+    await expect(importSpendings(importInput())).resolves.toEqual({
+      status: 'signed-out',
     });
   });
 });

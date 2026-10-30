@@ -15,6 +15,11 @@ Feature specs live in the `hl-budget-spec` repository (`specs/001-platform-found
   delete (keyboard entry with autofill for merchant, category and account), the month total and
   the By category card (table or donut). The user icon opens Settings for categories and
   accounts. Gated in `proxy.ts`; `noindex`.
+  "Import CSV" (above the month total) opens a modal window: drop or choose a CSV, review every
+  row in an editable table (same calendar, autofill and keys as the entry row), then add them all
+  at once. The file is parsed in the browser (`app/lib/csv.ts`, `app/lib/csv-import.ts`) and never
+  uploaded; dates with the year last are read day first, negative amounts become spendings.
+- `/sample-spendings.csv`: the import's downloadable sample (`public/`, copied into the image).
 - `/home` permanently redirects to `/spendings`.
 
 Writes are Server Actions in `app/lib/actions.ts` (one API call each, then `refresh()`); reads are
@@ -76,7 +81,10 @@ pnpm e2e
 Without `E2E_USERNAME`/`E2E_PASSWORD` the sign-in journeys skip and only the signed-out checks
 run. The spending specs create their own spendings with a per-run `e2e-…` merchant marker, record
 them on an `E2E card` account (created on first use) and remove them again. `e2e/a11y.spec.ts`
-scans each screen state with axe and fails on any serious or critical issue. The API-down case additionally needs a second server whose `API_BASE_URL` points at a closed
+scans each screen state with axe and fails on any serious or critical issue.
+`e2e/import-csv.spec.ts` builds its CSV files at run time (so their dates never go stale), and
+`node e2e/fixtures/make-csv.mjs 1000 > big.csv` prints a valid file of any size for the import's
+size and speed checks. The API-down case additionally needs a second server whose `API_BASE_URL` points at a closed
 port, its origin in `E2E_DOWN_BASE_URL`, and that origin allowed as a callback in the tenant.
 
 ## Container

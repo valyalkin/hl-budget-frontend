@@ -28,6 +28,8 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+# Static files such as the CSV import's sample (standalone output leaves public/ out).
+COPY --from=build /app/public ./public
 # Read-only root filesystem: /tmp and /app/.next/cache are the writable tmpDirs.
 USER 10001:10001
 EXPOSE 8080

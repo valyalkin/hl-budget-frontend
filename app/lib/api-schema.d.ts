@@ -151,6 +151,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/spending-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record many spendings at once, all or nothing
+         * @description Creates every row as a spending in one step. If any row is invalid, nothing is created and every problem is listed, with a JSON Pointer naming the row (`#/spendings/3/date`).
+         *
+         *     Categories and accounts are given by name. Each name is matched against the caller's items ignoring case and surrounding spaces, and created when none matches. A name that appears in several rows, in any letter case, creates one item.
+         *
+         *     Send an `Idempotency-Key` to make retries safe: repeating an import with the same key and the same rows returns the first import with 200 and `Idempotent-Replayed: true` instead of creating the spendings again.
+         */
+        post: operations["createSpendingImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/categories": {
         parameters: {
             query?: never;
@@ -187,6 +211,26 @@ export interface paths {
         put?: never;
         /** Create an account */
         post: operations["createAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/spending-imports/{importId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One of the caller's imports
+         * @description The summary recorded when the import was created. It does not change when the imported spendings are later edited or deleted. Another user's import is 404, like an unknown id.
+         */
+        get: operations["getSpendingImport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -452,6 +496,74 @@ export interface components {
              */
             readonly spendingCount: number;
         };
+        /** @description The rows to import, in the order the user reviewed them */
+        SpendingImportRequest: {
+            spendings: components["schemas"]["SpendingImportRow"][];
+        };
+        /** @description One spending. The same rules as SpendingRequest, with category and account by name */
+        SpendingImportRow: {
+            /**
+             * Format: date
+             * @description Today or earlier, in the app's time zone
+             * @example 2026-10-28
+             */
+            date: string;
+            /** @example Corner Bakery */
+            merchant: string;
+            amount: components["schemas"]["Money"];
+            /**
+             * @description Matched against the caller's categories ignoring case and surrounding spaces; created when none matches
+             * @example Groceries
+             */
+            categoryName: string;
+            /**
+             * @description Matched against the caller's accounts ignoring case and surrounding spaces; created when none matches
+             * @example Visa
+             */
+            accountName: string;
+        };
+        /** @description A sum of amounts. Unlike Money it may be zero and has no 8-digit cap. Always 2 decimals */
+        MoneyTotal: {
+            /** @example 2748.42 */
+            amount: string;
+            /**
+             * @description ISO 4217 code: the app's configured currency
+             * @example CAD
+             */
+            currency: string;
+        };
+        /** @description The receipt of a completed import. Holds nothing from the imported file */
+        SpendingImport: {
+            /**
+             * Format: uuid
+             * @example 9b2f6e1a-4c3d-4e5f-8a7b-0c1d2e3f4a5b
+             */
+            id: string;
+            /**
+             * Format: int32
+             * @description How many spendings were created
+             * @example 2
+             */
+            spendingCount: number;
+            /**
+             * Format: date
+             * @description The earliest spending date in the import
+             * @example 2026-09-30
+             */
+            firstDate: string;
+            /**
+             * Format: date
+             * @description The latest spending date in the import; clients show this month afterwards
+             * @example 2026-10-28
+             */
+            lastDate: string;
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: date-time
+             * @example 2026-10-29T14:03:11Z
+             */
+            createdAt: string;
+        };
         /** @description One page of the caller's spendings; `items` is empty when nothing matches */
         SpendingPage: {
             items: components["schemas"]["Spending"][];
@@ -469,16 +581,6 @@ export interface components {
             totalItems: number;
             /** Format: int32 */
             totalPages: number;
-        };
-        /** @description A sum of amounts. Unlike Money it may be zero and has no 8-digit cap. Always 2 decimals */
-        MoneyTotal: {
-            /** @example 2748.42 */
-            amount: string;
-            /**
-             * @description ISO 4217 code: the app's configured currency
-             * @example CAD
-             */
-            currency: string;
         };
         /** @description One month's total; zero when nothing was spent */
         MonthTotal: {
@@ -740,6 +842,16 @@ export interface components {
         };
         /** @description Invalid fields, each listed in `errors`. Codes include Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture, NotFound (an unknown or another user's category or account) and ExactlyOne (give exactly one of categoryId and categoryName, and of accountId and accountName). On create only, `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for a different spending */
         SpendingValidationFailed: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Nothing was created. Every invalid field of every row is listed in `errors`, its pointer naming the row by its 0-based position (`#/spendings/3/amount/amount`). Codes are those of SpendingRequest (Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture), plus Size on `#/spendings` for 0 or more than 1000 rows. `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for different rows */
+        SpendingImportValidationFailed: {
             headers: {
                 "X-Request-Id": components["headers"]["X-Request-Id"];
                 [name: string]: unknown;
@@ -1213,6 +1325,54 @@ export interface operations {
             503: components["responses"]["ServiceUnavailable"];
         };
     };
+    createSpendingImport: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional. 1 to 255 visible ASCII characters; a UUID is recommended
+                 * @example 6a1d9c2e-8f4b-4b7a-9e3c-1f2d3c4b5a69
+                 */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpendingImportRequest"];
+            };
+        };
+        responses: {
+            /** @description A replay of an earlier import with the same Idempotency-Key and rows; nothing new was created */
+            200: {
+                headers: {
+                    /** @description Always `true` on a replay */
+                    "Idempotent-Replayed"?: "true";
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendingImport"];
+                };
+            };
+            /** @description Created; every row is now a spending */
+            201: {
+                headers: {
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendingImport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["SpendingImportValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
     listCategories: {
         parameters: {
             query?: never;
@@ -1317,6 +1477,34 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             409: components["responses"]["DuplicateName"];
             422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getSpendingImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example 9b2f6e1a-4c3d-4e5f-8a7b-0c1d2e3f4a5b */
+                importId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The import */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendingImport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
             503: components["responses"]["ServiceUnavailable"];
         };

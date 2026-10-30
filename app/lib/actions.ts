@@ -7,11 +7,24 @@ import { getSession } from '@/app/lib/auth';
 import {
   ApiError,
   type Spending,
+  type SpendingImport,
+  type SpendingImportRequest,
   type SpendingRequest,
   UnauthenticatedError,
 } from '@/app/lib/definitions';
-import { draftProblem } from '@/app/lib/draft';
-import { fieldFor, MESSAGES, messageFor } from '@/app/lib/messages';
+import {
+  draftProblem,
+  draftProblems,
+  type Field,
+  FIELDS,
+} from '@/app/lib/draft';
+import {
+  fieldFor,
+  fieldMessage,
+  MESSAGES,
+  messageFor,
+  needAttention,
+} from '@/app/lib/messages';
 import { monthOf, monthParam, parseAmountInput } from '@/app/lib/utils';
 
 /**
@@ -239,4 +252,142 @@ export async function deleteAccount(item: {
   name: string;
 }): Promise<ActionResult> {
   return deleteNamed('account', item);
+}
+
+// ---------------------------------------------------------------------------------------------
+// CSV import (specs/004-csv-import research R-013)
+
+const importInput = z.object({
+  rows: z
+    .array(
+      z.object({
+        key: z.string().min(1),
+        draft: z.object({
+          date: z.string(),
+          merchant: z.string(),
+          category: z.string(),
+          account: z.string(),
+          amount: z.string(),
+        }),
+      }),
+    )
+    .min(1)
+    .max(1000),
+  idempotencyKey: z.uuid(),
+  today: z.iso.date(),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+});
+
+export type ImportInput = z.input<typeof importInput>;
+
+/** One field of one row that needs attention; `row` is the row's position in the request. */
+export type ImportRowError = { row: number; field: Field; message: string };
+
+export type ImportResult =
+  | { status: 'ok'; month: string; count: number }
+  | { status: 'error'; message: string; rowErrors?: ImportRowError[] }
+  | { status: 'already-imported' }
+  | { status: 'signed-out' };
+
+/** `#/spendings/3/amount/amount` → row 3, field `amount`. */
+const ROW_POINTER = /^#\/spendings\/(\d+)\/(\w+)/;
+const API_FIELDS: Record<string, Field> = {
+  date: 'date',
+  merchant: 'merchant',
+  amount: 'amount',
+  categoryName: 'category',
+  accountName: 'account',
+};
+
+function rowErrorsOf(error: ApiError): ImportRowError[] {
+  return (error.errors ?? []).flatMap((violation) => {
+    const match = ROW_POINTER.exec(violation.pointer ?? '');
+    const field = match ? API_FIELDS[match[2] ?? ''] : undefined;
+    if (!match || !field) {
+      return [];
+    }
+    const message = fieldMessage(field) ?? MESSAGES.unavailable;
+    return [{ row: Number(match[1]), field, message }];
+  });
+}
+
+function refused(rowErrors: ImportRowError[]): ImportResult {
+  const rows = new Set(rowErrors.map((error) => error.row)).size;
+  return { status: 'error', message: needAttention(rows), rowErrors };
+}
+
+/**
+ * Adds every reviewed row as a spending in one all-or-nothing request (FR-032, FR-033). The
+ * Idempotency-Key makes a doubled or retried add import once (FR-034); a key the server already
+ * used for other rows means an earlier attempt was saved, so the result is `already-imported`.
+ * Returns the month of the latest imported date (FR-035).
+ */
+export async function importSpendings(
+  input: ImportInput,
+): Promise<ImportResult> {
+  const parsed = importInput.safeParse(input);
+  if (!parsed.success) {
+    return { status: 'error', message: MESSAGES.unavailable };
+  }
+  const { rows, idempotencyKey, today, currency } = parsed.data;
+
+  const local = rows.flatMap(({ draft }, row) => {
+    const problems = draftProblems(draft, today);
+    return FIELDS.flatMap((field) => {
+      const message = problems[field];
+      return message ? [{ row, field, message }] : [];
+    });
+  });
+  if (local.length > 0) {
+    return refused(local);
+  }
+
+  const body: SpendingImportRequest = {
+    spendings: rows.map(({ draft }) => ({
+      date: draft.date,
+      merchant: draft.merchant.trim(),
+      amount: { amount: parseAmountInput(draft.amount) ?? '', currency },
+      categoryName: draft.category.trim(),
+      accountName: draft.account.trim(),
+    })),
+  };
+
+  if (!(await signedIn())) {
+    return SIGNED_OUT;
+  }
+  try {
+    const saved = await authedFetch<SpendingImport>(
+      '/api/v1/spending-imports',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    refresh();
+    return {
+      status: 'ok',
+      month: monthParam(monthOf(saved.lastDate)),
+      count: saved.spendingCount,
+    };
+  } catch (error) {
+    if (error instanceof UnauthenticatedError) {
+      return SIGNED_OUT;
+    }
+    if (
+      error instanceof ApiError &&
+      error.reason === 'idempotency-key-reused'
+    ) {
+      refresh();
+      return { status: 'already-imported' };
+    }
+    const rowErrors = error instanceof ApiError ? rowErrorsOf(error) : [];
+    if (rowErrors.length > 0) {
+      return refused(rowErrors);
+    }
+    return { status: 'error', message: messageFor(error) };
+  }
 }

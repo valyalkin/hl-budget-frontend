@@ -17,6 +17,7 @@ import {
   type MoneyValue,
   type YearMonth,
 } from '@/app/lib/utils';
+import { useOptionalImport } from '@/app/ui/import/import-provider';
 import EntryRow from '@/app/ui/spendings/entry-row';
 import SpendingRow from '@/app/ui/spendings/spending-row';
 
@@ -50,6 +51,14 @@ export default function SpendingsTable({
   const [message, setMessage] = useState('');
   const [removing, setRemoving] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const setImportRowOpen = useOptionalImport()?.setRowOpen;
+  const rowOpen = open !== null;
+
+  // While a row is open, "Import CSV" is unavailable, like the + button (feature 004 Edge Cases).
+  useEffect(() => {
+    setImportRowOpen?.(rowOpen);
+    return () => setImportRowOpen?.(false);
+  }, [setImportRowOpen, rowOpen]);
 
   // Enter anywhere on the page opens a new row, as long as nothing has focus (so Enter on a
   // button, link or field keeps its own meaning) and no dialog such as Settings is open.

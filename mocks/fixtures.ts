@@ -1,4 +1,5 @@
 import type {
+  SpendingImport,
   AccountList,
   CategoryList,
   CategoryTotals,
@@ -121,4 +122,14 @@ export const merchantList: MerchantList = {
       lastAccount: { id: ids.visa, name: 'Visa' },
     },
   ],
+};
+
+/** The receipt of an import, as in the contract's example (feature 004). */
+export const spendingImport: SpendingImport = {
+  id: '9b2f6e1a-4c3d-4e5f-8a7b-0c1d2e3f4a5b',
+  spendingCount: 2,
+  firstDate: '2026-09-30',
+  lastDate: '2026-10-28',
+  total: { amount: '73.60', currency: 'CAD' },
+  createdAt: '2026-10-28T14:03:11Z',
 };
