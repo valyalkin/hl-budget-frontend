@@ -55,13 +55,11 @@ test('the CSV import window in each of its states', async ({ page }) => {
   await signIn(page);
   await page.getByRole('button', { name: 'Import CSV' }).click();
   await expectAccessible(page, 'import: pick');
-  await page
-    .getByLabel('Choose a CSV file')
-    .setInputFiles({
-      name: 'x.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from('x'),
-    });
+  await page.getByLabel('Choose a CSV file').setInputFiles({
+    name: 'x.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('x'),
+  });
   await expectAccessible(page, 'import: pick with an error');
 
   const rows = Array.from(
@@ -104,11 +102,16 @@ test('the CSV import window in each of its states', async ({ page }) => {
   await inViewport('category list', list);
   await expectAccessible(page, 'import: category list open');
 
-  // Tab never leaves the modal window.
+  // Tab never reaches the page behind the modal window. Past the window's last
+  // control Chromium hands focus to the browser itself (activeElement is then
+  // body) before wrapping back into the window.
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press('Tab');
     expect(
-      await page.evaluate(() => !!document.activeElement?.closest('dialog')),
+      await page.evaluate(() => {
+        const active = document.activeElement;
+        return active === document.body || !!active?.closest('dialog');
+      }),
     ).toBe(true);
   }
 });

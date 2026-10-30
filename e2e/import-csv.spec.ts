@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
@@ -140,7 +141,13 @@ test.describe('US3: download the sample file', () => {
       page.getByRole('link', { name: 'Download sample CSV' }).click(),
     ]);
     expect(download.suggestedFilename()).toBe('sample-spendings.csv');
-    const path = await download.path();
+    // Saved under its own name: download.path() has no extension, and a file
+    // without .csv is refused like any other non-CSV file.
+    const path = join(
+      tmpdir(),
+      `${Date.now()}-${download.suggestedFilename()}`,
+    );
+    await download.saveAs(path);
     expect(readFileSync(path, 'utf8').split('\n')[0]).toBe(
       'Date,Merchant,Category,Account,Amount',
     );
@@ -211,7 +218,11 @@ test.describe('import edge cases', () => {
   }) => {
     await signIn(page);
     await openImport(page);
-    const alert = page.getByRole('alert');
+    // Scoped to the window: the production build adds Next.js's own route
+    // announcer, an empty alert, to every page.
+    const alert = page
+      .getByRole('dialog', { name: 'Import CSV' })
+      .getByRole('alert');
     const cases: [
       Parameters<ReturnType<typeof chooser>['setInputFiles']>[0],
       string,
