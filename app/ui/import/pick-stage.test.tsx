@@ -137,6 +137,19 @@ describe('PickStage', () => {
     expect(onRows).not.toHaveBeenCalled();
   });
 
+  it('offers the sample as a download that leaves the window open', async () => {
+    const { onClose, onRows } = setup();
+    const link = screen.getByRole('link', { name: 'Download sample CSV' });
+    expect(link).toHaveAttribute('href', '/sample-spendings.csv');
+    expect(link).toHaveAttribute('download', 'sample-spendings.csv');
+
+    link.addEventListener('click', (event) => event.preventDefault());
+    await userEvent.click(link);
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onRows).not.toHaveBeenCalled();
+  });
+
   it('closes with Cancel or the close button', async () => {
     const { onClose } = setup();
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));

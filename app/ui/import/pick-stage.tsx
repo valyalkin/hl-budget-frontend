@@ -144,7 +144,13 @@ export default function PickStage({
         </div>
       </div>
       <div className="flex items-center justify-between gap-4 border-t border-line-soft px-6 py-4">
-        <span />
+        <a
+          href="/sample-spendings.csv"
+          download="sample-spendings.csv"
+          className="min-h-11 content-center px-1 font-semibold text-brand underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-brand"
+        >
+          Download sample CSV
+        </a>
         <button
           type="button"
           onClick={onClose}

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   checkFile,
@@ -246,5 +248,45 @@ describe('readImport', () => {
   it('accepts exactly 1,000 data rows', () => {
     const result = readImport([header, ...lines(MAX_ROWS)].join('\n'), lookups);
     expect('rows' in result && result.rows).toHaveLength(MAX_ROWS);
+  });
+});
+
+describe('the sample file', () => {
+  const text = readFileSync(
+    join(process.cwd(), 'public', 'sample-spendings.csv'),
+    'utf8',
+  );
+  const result = readImport(text, {
+    categories: [{ name: 'Groceries' }, { name: 'Car' }],
+    accounts: [{ name: 'Visa' }],
+  });
+  const rows = 'rows' in result ? result.rows.map((r) => r.draft) : [];
+  const byMerchant = (name: string) => rows.find((r) => r.merchant === name);
+
+  it('has the documented header and 10 rows', () => {
+    expect(text.split('\n')[0]).toBe('Date,Merchant,Category,Account,Amount');
+    expect(rows).toHaveLength(10);
+  });
+
+  it('shows every case the review handles', () => {
+    expect(byMerchant('Dr. Patel Dental')?.category).toBe('');
+    expect(byMerchant('Birch Yoga Studio')?.account).toBe('');
+    expect(byMerchant('Thrift & Co.')?.amount).toBe('');
+    expect(byMerchant('Ride share')?.amount).toBe('18.90');
+    expect(byMerchant('Lakeshore Fuel, Hwy 7')).toMatchObject({
+      date: '2026-10-25',
+      amount: '61.20',
+    });
+    expect(byMerchant('Hardware Depot')).toMatchObject({
+      date: '2026-10-03',
+      amount: '1041.18',
+    });
+    expect(byMerchant('Harbour Coffee')?.date).toBe('2026-10-27');
+  });
+
+  it('has no date in the future of the feature’s release', () => {
+    expect(rows.every((r) => r.date !== '' && r.date <= '2026-10-28')).toBe(
+      true,
+    );
   });
 });

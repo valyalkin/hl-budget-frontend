@@ -61,6 +61,12 @@ describe('proxy', () => {
     },
   );
 
+  it('serves the import’s sample CSV without a session', async () => {
+    const response = await proxy(request('/sample-spendings.csv'));
+    expect(response.status).toBe(200);
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
   it('does not treat /spendingsx as protected', async () => {
     expect((await proxy(request('/spendingsx'))).status).toBe(200);
   });
