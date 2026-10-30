@@ -5,6 +5,7 @@ import {
   categoryTotals,
   merchantList,
   monthlyTotals,
+  spendingImport,
   spendingPage,
 } from './fixtures';
 
@@ -21,4 +22,13 @@ export const handlers: RequestHandler[] = [
   http.get(`${API}/categories`, () => HttpResponse.json(categoryList)),
   http.get(`${API}/accounts`, () => HttpResponse.json(accountList)),
   http.get(`${API}/merchants`, () => HttpResponse.json(merchantList)),
+  http.post(`${API}/spending-imports`, () =>
+    HttpResponse.json(spendingImport, {
+      status: 201,
+      headers: { Location: `/api/v1/spending-imports/${spendingImport.id}` },
+    }),
+  ),
+  http.get(`${API}/spending-imports/:id`, () =>
+    HttpResponse.json(spendingImport),
+  ),
 ];

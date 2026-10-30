@@ -538,31 +538,31 @@ export interface components {
              * Format: uuid
              * @example 9b2f6e1a-4c3d-4e5f-8a7b-0c1d2e3f4a5b
              */
-            id?: string;
+            id: string;
             /**
              * Format: int32
              * @description How many spendings were created
              * @example 2
              */
-            spendingCount?: number;
+            spendingCount: number;
             /**
              * Format: date
              * @description The earliest spending date in the import
              * @example 2026-09-30
              */
-            firstDate?: string;
+            firstDate: string;
             /**
              * Format: date
              * @description The latest spending date in the import; clients show this month afterwards
              * @example 2026-10-28
              */
-            lastDate?: string;
-            total?: components["schemas"]["MoneyTotal"];
+            lastDate: string;
+            total: components["schemas"]["MoneyTotal"];
             /**
              * Format: date-time
              * @example 2026-10-29T14:03:11Z
              */
-            createdAt?: string;
+            createdAt: string;
         };
         /** @description One page of the caller's spendings; `items` is empty when nothing matches */
         SpendingPage: {

@@ -68,7 +68,7 @@ export function inUse(
 }
 
 /** The message for a spending field the API rejected, by its field name. */
-function fieldMessage(field: string): string | undefined {
+export function fieldMessage(field: string): string | undefined {
   if (field === 'date') return MESSAGES.dateNotFuture;
   if (field === 'merchant') return MESSAGES.merchant;
   if (field.startsWith('amount')) return MESSAGES.amount;

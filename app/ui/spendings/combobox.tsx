@@ -14,7 +14,11 @@ import {
   rankSuggestions,
   type Suggestible,
 } from '@/app/lib/utils';
-import { FLOATING_START, useFloating } from '@/app/ui/spendings/use-floating';
+import {
+  FLOATING_START,
+  useFloating,
+  useFloatingRoot,
+} from '@/app/ui/spendings/use-floating';
 
 const MAX_SHOWN = 8;
 
@@ -76,6 +80,7 @@ export default function Combobox({
     createHint && value.trim() !== '' && !exactMatch(value, options);
   const expanded = open && (ranked.length > 0 || showCreate);
   useFloating(expanded, ownRef, listRef, { matchWidth: true });
+  const floatingRoot = useFloatingRoot();
 
   // A value filled in from outside while the field has focus (accepting a past merchant fills
   // category and account) is selected, so typing replaces it rather than adding to it. Without
@@ -215,7 +220,7 @@ export default function Combobox({
           invalid ? 'border-error' : 'border-line'
         }`}
       />
-      {expanded
+      {expanded && floatingRoot
         ? createPortal(
             <div
               ref={listRef}
@@ -259,7 +264,7 @@ export default function Combobox({
                 </div>
               ) : null}
             </div>,
-            document.body,
+            floatingRoot,
           )
         : null}
     </div>

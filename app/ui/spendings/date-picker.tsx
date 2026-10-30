@@ -2,7 +2,11 @@
 
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FLOATING_START, useFloating } from '@/app/ui/spendings/use-floating';
+import {
+  FLOATING_START,
+  useFloating,
+  useFloatingRoot,
+} from '@/app/ui/spendings/use-floating';
 import {
   addMonths,
   calendarWeeks,
@@ -60,6 +64,7 @@ export default function DatePicker({
   const panel = useRef<HTMLDivElement | null>(null);
 
   useFloating(open, trigger, panel);
+  const floatingRoot = useFloatingRoot();
 
   // A press anywhere outside the field and its calendar closes the calendar.
   useEffect(() => {
@@ -184,7 +189,7 @@ export default function DatePicker({
           />
         </svg>
       </button>
-      {open
+      {open && floatingRoot
         ? createPortal(
             <div
               ref={panel}
@@ -325,7 +330,7 @@ export default function DatePicker({
                 </button>
               </div>
             </div>,
-            document.body,
+            floatingRoot,
           )
         : null}
     </div>
