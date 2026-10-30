@@ -4,7 +4,15 @@ import {
   ApiUnavailableError,
   UnauthenticatedError,
 } from '@/app/lib/definitions';
-import { fieldFor, MESSAGES, messageFor } from '@/app/lib/messages';
+import {
+  added,
+  addLabel,
+  fieldFor,
+  MESSAGES,
+  messageFor,
+  needAttention,
+  rowCount,
+} from '@/app/lib/messages';
 
 const problem = (
   status: number,
@@ -106,5 +114,45 @@ describe('fieldFor', () => {
       ),
     ).toBe('category');
     expect(fieldFor(new Error('x'))).toBeUndefined();
+  });
+});
+
+describe('import messages', () => {
+  it('words the file refusals as in the spec', () => {
+    expect(MESSAGES.notCsv).toBe(
+      'That doesn’t look like a CSV file. Choose a .csv export.',
+    );
+    expect(MESSAGES.unreadable).toBe('The file couldn’t be read. Try again.');
+    expect(MESSAGES.noRows).toBe(
+      'No spendings found in that file. Check that it is a CSV with a header row and at least one data row.',
+    );
+    expect(MESSAGES.tooLarge).toBe(
+      'That file is too large. Import at most 1 MB and 1,000 rows at a time.',
+    );
+    expect(MESSAGES.alreadyImported).toBe(
+      'These spendings were already added.',
+    );
+  });
+
+  it('counts rows that need attention', () => {
+    expect(needAttention(1)).toBe('1 row needs attention');
+    expect(needAttention(4)).toBe('4 rows need attention');
+  });
+
+  it('confirms what was added', () => {
+    expect(added(12, 'oct.csv')).toBe('Added 12 spendings from oct.csv');
+    expect(added(1, 'one.csv')).toBe('Added 1 spending from one.csv');
+  });
+
+  it('labels the add button', () => {
+    expect(addLabel(0)).toBe('Add spendings');
+    expect(addLabel(1)).toBe('Add 1 spending');
+    expect(addLabel(10)).toBe('Add 10 spendings');
+  });
+
+  it('counts rows with a thousands separator', () => {
+    expect(rowCount(1)).toBe('1 row');
+    expect(rowCount(10)).toBe('10 rows');
+    expect(rowCount(1000)).toBe('1,000 rows');
   });
 });

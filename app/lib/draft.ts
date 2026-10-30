@@ -26,32 +26,47 @@ const MAX_MERCHANT = 255;
 const MAX_NAME = 50;
 
 /**
- * The first problem with a draft, in field order (FR-037), worded as in the spec; null when the
- * draft can be saved. Mirrors the server's rules; the server stays authoritative.
+ * Every problem with a draft, by field, worded as in the spec; empty when it can be saved.
+ * Mirrors the server's rules; the server stays authoritative. The import review shows all of
+ * them at once (specs/004-csv-import FR-022).
  */
-export function draftProblem(draft: Draft, today: string): DraftProblem | null {
+export function draftProblems(
+  draft: Draft,
+  today: string,
+): Partial<Record<Field, string>> {
+  const problems: Partial<Record<Field, string>> = {};
   if (!isValidDate(draft.date)) {
-    return { field: 'date', message: MESSAGES.pickDate };
-  }
-  if (draft.date > today) {
-    return { field: 'date', message: MESSAGES.dateNotFuture };
+    problems.date = MESSAGES.pickDate;
+  } else if (draft.date > today) {
+    problems.date = MESSAGES.dateNotFuture;
   }
   const merchant = draft.merchant.trim();
   if (!merchant || merchant.length > MAX_MERCHANT) {
-    return { field: 'merchant', message: MESSAGES.merchant };
+    problems.merchant = MESSAGES.merchant;
   }
   const category = draft.category.trim();
   if (!category || category.length > MAX_NAME) {
-    return { field: 'category', message: MESSAGES.category };
+    problems.category = MESSAGES.category;
   }
   const account = draft.account.trim();
   if (!account || account.length > MAX_NAME) {
-    return { field: 'account', message: MESSAGES.account };
+    problems.account = MESSAGES.account;
   }
   if (parseAmountInput(draft.amount) === null) {
-    return { field: 'amount', message: MESSAGES.amount };
+    problems.amount = MESSAGES.amount;
   }
-  return null;
+  return problems;
+}
+
+/**
+ * The first problem with a draft, in field order (FR-037), worded as in the spec; null when the
+ * draft can be saved.
+ */
+export function draftProblem(draft: Draft, today: string): DraftProblem | null {
+  const problems = draftProblems(draft, today);
+  const field = FIELDS.find((name) => problems[name] !== undefined);
+  const message = field ? problems[field] : undefined;
+  return field && message ? { field, message } : null;
 }
 
 /** Whether a single field has something in it (for Enter: "move on" versus "save"). */

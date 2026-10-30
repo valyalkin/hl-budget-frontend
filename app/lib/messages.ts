@@ -19,7 +19,36 @@ export const MESSAGES = {
   gone: 'This item no longer exists.',
   unavailable: 'Couldn’t reach the server. Your changes weren’t saved.',
   loadFailed: 'We couldn’t load your spendings.',
+  notCsv: 'That doesn’t look like a CSV file. Choose a .csv export.',
+  unreadable: 'The file couldn’t be read. Try again.',
+  noRows:
+    'No spendings found in that file. Check that it is a CSV with a header row and at least one data row.',
+  tooLarge:
+    'That file is too large. Import at most 1 MB and 1,000 rows at a time.',
+  alreadyImported: 'These spendings were already added.',
 } as const;
+
+/** `1 row needs attention`, `4 rows need attention` (specs/004-csv-import FR-020). */
+export function needAttention(count: number): string {
+  return plural(count, 'row needs', 'rows need') + ' attention';
+}
+
+/** `Added 12 spendings from oct.csv` (FR-035). */
+export function added(count: number, fileName: string): string {
+  return `Added ${plural(count, 'spending', 'spendings')} from ${fileName}`;
+}
+
+/** The import's add button: `Add spendings` while nothing can be added, else with the count. */
+export function addLabel(count: number): string {
+  return count > 0
+    ? `Add ${plural(count, 'spending', 'spendings')}`
+    : 'Add spendings';
+}
+
+/** `10 rows`, `1,000 rows`. */
+export function rowCount(count: number): string {
+  return `${count.toLocaleString('en-CA')} ${count === 1 ? 'row' : 'rows'}`;
+}
 
 /** `“Coffee” already exists.` */
 export function alreadyExists(name: string): string {
