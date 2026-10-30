@@ -124,3 +124,43 @@ export async function removeSpendingsCreatedBy(page: Page, mark: string) {
     await expect(remove).toHaveCount(before - 1);
   }
 }
+
+/** A date `daysAgo` days before today, day first (`DD/MM/YYYY`), as bank exports write it. */
+export function dayFirst(daysAgo: number): string {
+  const day = new Date(Date.now() - daysAgo * 86_400_000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(day.getDate())}/${pad(day.getMonth() + 1)}/${day.getFullYear()}`;
+}
+
+/** `YYYY-MM` of the date `daysAgo` days before today. */
+export function monthOfDaysAgo(daysAgo: number): string {
+  const day = new Date(Date.now() - daysAgo * 86_400_000);
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** A CSV file for Playwright's setInputFiles, built at run time so its dates never go stale. */
+export function csvFile(name: string, lines: string[]) {
+  return {
+    name,
+    mimeType: 'text/csv',
+    buffer: Buffer.from(lines.join('\n') + '\n'),
+  };
+}
+
+/** Opens the import window from the Spendings screen. */
+export async function openImport(page: Page) {
+  await page.getByRole('button', { name: 'Import CSV' }).click();
+  await expect(page.getByRole('dialog', { name: 'Import CSV' })).toBeVisible();
+}
+
+/** Removes the marked spendings from each of the given months (`YYYY-MM`). */
+export async function removeImported(
+  page: Page,
+  mark: string,
+  months: string[],
+) {
+  for (const month of new Set(months)) {
+    await page.goto(`/spendings?month=${month}`);
+    await removeSpendingsCreatedBy(page, mark);
+  }
+}
