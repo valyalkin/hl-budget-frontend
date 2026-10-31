@@ -49,18 +49,31 @@ test.describe('US4 (phone): the month by category', () => {
     await expect(legend.last()).toContainText('Everything else');
     await checkScreen(page);
 
-    // The choice stays when the month changes.
-    await page.goto('/spendings?month=2001-01');
+    // The choice stays when the month changes (through the dropdown, not a reload).
+    const now = new Date();
+    const earlier = now.getMonth() === 0 ? 1 : now.getMonth();
+    await page
+      .getByRole('combobox', { name: 'Month' })
+      .selectOption(String(earlier));
+    await expect(page.getByRole('combobox', { name: 'Month' })).toHaveValue(
+      String(earlier),
+    );
     await expect(page.getByRole('button', { name: 'Pie' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
     await expect(
+      page.getByRole('button', { name: 'By category' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    // An empty month says so.
+    await page.goto('/spendings?month=2001-01');
+    await page.getByRole('button', { name: 'By category' }).click();
+    await expect(
       phoneRoot(page).getByText(/^Nothing to break down in /),
     ).toBeVisible();
 
     await page.goto('/spendings');
-    await page.getByRole('button', { name: 'Spendings' }).click();
     await deletePhoneSpendings(page, mark);
   });
 });

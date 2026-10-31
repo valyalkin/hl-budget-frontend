@@ -78,21 +78,23 @@ test.describe('US6 (phone): import a CSV file', () => {
       '5 rows need attention',
     );
     await expect(
-      review.getByRole('button', { name: new RegExp(`^${mark} Fuel, Hwy 7,`) }),
-    ).toBeVisible();
-    await expect(
       review.getByRole('button', {
-        name: new RegExp(`^${mark} Ride, .*\\$18\\.90$`),
+        name: new RegExp(`^${mark} Fuel, Hwy 7\\s*,`),
       }),
     ).toBeVisible();
     await expect(
       review.getByRole('button', {
-        name: new RegExp(`^${mark} Market, .*\\$1,204\\.50$`),
+        name: new RegExp(`^${mark} Ride\\s*,.*\\$18\\.90$`),
       }),
     ).toBeVisible();
     await expect(
       review.getByRole('button', {
-        name: new RegExp(`^${mark} Cafe, No date,`),
+        name: new RegExp(`^${mark} Market\\s*,.*\\$1,204\\.50$`),
+      }),
+    ).toBeVisible();
+    await expect(
+      review.getByRole('button', {
+        name: new RegExp(`^${mark} Cafe\\s*,\\s*No date · `),
       }),
     ).toBeVisible();
     await expect(review.getByText('No category')).toBeVisible();
@@ -106,7 +108,7 @@ test.describe('US6 (phone): import a CSV file', () => {
     const fix = page.getByRole('dialog', { name: 'Fix row' });
     const openRow = (name: string) =>
       review
-        .getByRole('button', { name: new RegExp(`^${mark} ${name},`) })
+        .getByRole('button', { name: new RegExp(`^${mark} ${name}\\s*,`) })
         .click();
 
     // Save row refuses an incomplete row.
@@ -139,7 +141,7 @@ test.describe('US6 (phone): import a CSV file', () => {
     await fix.getByRole('button', { name: 'Remove row' }).click();
     await expect(fix).toHaveCount(0);
     await expect(
-      review.getByRole('button', { name: new RegExp(`^${mark} Thrift,`) }),
+      review.getByRole('button', { name: new RegExp(`^${mark} Thrift\\s*,`) }),
     ).toHaveCount(0);
 
     await expect(review.getByRole('status')).toHaveText('All rows look good');

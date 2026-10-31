@@ -9,7 +9,6 @@ import {
   importAddLabel,
   importBanner,
   importRowDisplay,
-  type ImportRowView,
 } from '@/app/lib/phone';
 import { CheckIcon, ChevronLeftIcon, WarningIcon } from '@/app/ui/phone/icons';
 import PhoneDialog from '@/app/ui/phone/phone-dialog';
@@ -17,19 +16,6 @@ import {
   type ImportSession,
   usePhoneUi,
 } from '@/app/ui/phone/phone-ui-provider';
-
-function rowLabel(view: ImportRowView): string {
-  const parts = [
-    view.merchant,
-    view.date,
-    view.category,
-    view.account,
-    view.amount,
-  ].map((part) => part.text);
-  return view.needsAttention
-    ? `${parts.join(', ')}, needs attention`
-    : parts.join(', ');
-}
 
 const tone = (warn: boolean) => (warn ? 'font-semibold text-warn' : undefined);
 
@@ -137,7 +123,6 @@ export default function PhoneReview({
                 <li key={row.key}>
                   <button
                     type="button"
-                    aria-label={rowLabel(view)}
                     onClick={() => ui.open({ kind: 'fix-row', key: row.key })}
                     className="grid min-h-16 w-full grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand active:bg-line-soft"
                   >
@@ -156,6 +141,7 @@ export default function PhoneReview({
                         )}
                       >
                         {view.merchant.text}
+                        <span className="sr-only">, </span>
                       </span>
                       <span className="truncate text-sm text-muted">
                         <span className={tone(view.date.warn)}>
@@ -169,15 +155,21 @@ export default function PhoneReview({
                         <span className={tone(view.account.warn)}>
                           {view.account.text}
                         </span>
+                        <span className="sr-only">, </span>
                       </span>
                     </span>
                     <span
                       className={clsx(
-                        'font-mono text-sm tabular-nums',
-                        tone(view.amount.warn) ?? 'font-medium',
+                        'text-sm',
+                        view.amount.warn
+                          ? tone(true)
+                          : 'font-mono font-medium tabular-nums',
                       )}
                     >
                       {view.amount.text}
+                      {view.needsAttention ? (
+                        <span className="sr-only">, needs attention</span>
+                      ) : null}
                     </span>
                   </button>
                 </li>

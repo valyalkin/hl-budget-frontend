@@ -19,6 +19,14 @@ Feature specs live in the `hl-budget-spec` repository (`specs/001-platform-found
   row in an editable table (same calendar, autofill and keys as the entry row), then add them all
   at once. The file is parsed in the browser (`app/lib/csv.ts`, `app/lib/csv-import.ts`) and never
   uploaded; dates with the year last are read day first, negative amounts become spendings.
+- **Phones (below 640px wide)**: the same `/spendings` address shows a touch layout instead
+  (specs/006-mobile-view): Month and Year dropdowns, the month total, a compact list with a
+  floating Add spending button, By category as a table or a top-6 donut, full-screen New / Edit /
+  Fix row forms, a delete confirmation sheet, an account menu sheet (Settings, Import CSV, Sign
+  out) and a two-step import. The code is in `app/ui/phone/` and `app/lib/phone.ts`; it reuses the
+  desktop's rules and Server Actions but none of its components. The desktop tree renders exactly
+  as before inside `DesktopOnly`; `PhoneOnly` swaps in the phone tree once `matchMedia` reports a
+  phone width, and each phone screen or sheet adds a history entry, so the back gesture closes it.
 - `/sample-spendings.csv`: the import's downloadable sample (`public/`, copied into the image).
 - `/home` permanently redirects to `/spendings`.
 
@@ -75,13 +83,18 @@ pnpm exec playwright install chromium     # once
 # backend running on :8080, .env.local filled in
 export E2E_USERNAME=test-user@example.com E2E_PASSWORD='…'
 set -a; . ./.env.local; set +a
-pnpm e2e
+pnpm e2e                  # both projects
+pnpm e2e --project=chromium   # desktop journeys only
+pnpm e2e --project=phone      # phone journeys only (e2e/phone/, iPhone 13 size on Chromium)
 ```
 
 Without `E2E_USERNAME`/`E2E_PASSWORD` the sign-in journeys skip and only the signed-out checks
 run. The spending specs create their own spendings with a per-run `e2e-…` merchant marker, record
 them on an `E2E card` account (created on first use) and remove them again. `e2e/a11y.spec.ts`
 scans each screen state with axe and fails on any serious or critical issue.
+The phone specs (`e2e/phone/`) also check every phone screen for 44px touch targets, 16px input
+text and no sideways scrolling at 320, 390 and 430px. Many sign-ins in a row can hit Auth0's
+rate limit and time out on the login page; `pnpm e2e --last-failed` re-runs just those.
 `e2e/import-csv.spec.ts` builds its CSV files at run time (so their dates never go stale), and
 `node e2e/fixtures/make-csv.mjs 1000 > big.csv` prints a valid file of any size for the import's
 size and speed checks. The API-down case additionally needs a second server whose `API_BASE_URL` points at a closed

@@ -38,7 +38,8 @@ test.describe('US1 (phone): see my spendings for a month', () => {
     const row = spendingRow(page, `${mark} Market`);
     await expect(row).toContainText('Groceries');
     await expect(row).toContainText('$12.40');
-    await expect(row).not.toContainText(mark);
+    // The merchant is only for screen readers.
+    await expect(row.getByText(`${mark} Market`)).toHaveClass(/\bsr-only\b/);
     await checkScreen(page);
     await deletePhoneSpendings(page, mark);
   });

@@ -149,10 +149,10 @@ export async function addSpendingPhone(page: Page, spending: PhoneSpending) {
   await expect(spendingRow(page, spending.merchant).first()).toBeVisible();
 }
 
-/** A list row; rows name their merchant for screen readers. */
+/** A list row; its name ends with the merchant, which only screen readers hear. */
 export function spendingRow(page: Page, merchant: string): Locator {
   return phoneRoot(page).getByRole('button', {
-    name: new RegExp(`, ${escape(merchant)}, `),
+    name: new RegExp(`,\\s*${escape(merchant)}$`),
   });
 }
 
@@ -162,6 +162,8 @@ function escape(text: string): string {
 
 /** Deletes every spending in the shown month whose merchant contains `mark`, through the sheet. */
 export async function deletePhoneSpendings(page: Page, mark: string) {
+  // Wait for the phone screen, or the count below would read an empty skeleton.
+  await expectPhoneLayout(page);
   const rows = phoneRoot(page).getByRole('button', {
     name: new RegExp(escape(mark)),
   });

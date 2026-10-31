@@ -27,7 +27,9 @@ describe('PhoneApp', () => {
       screen.getByRole('heading', { level: 1, name: 'October 2026' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /^Oct 27, Neighbourhood Market/ }),
+      screen.getByRole('button', {
+        name: /^Oct 27,\s*Groceries,\s*\$84\.37,\s*Neighbourhood Market$/,
+      }),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'By category' }));
     expect(
@@ -38,7 +40,9 @@ describe('PhoneApp', () => {
   it('opens a spending prefilled, and deletes it through the sheet', async () => {
     renderPhone(<PhoneApp data={phoneData()} />);
     await userEvent.click(
-      screen.getByRole('button', { name: /^Oct 27, Neighbourhood Market/ }),
+      screen.getByRole('button', {
+        name: /^Oct 27,\s*Groceries,\s*\$84\.37,\s*Neighbourhood Market$/,
+      }),
     );
     expect(screen.getByRole('textbox', { name: 'Amount (CAD)' })).toHaveValue(
       '84.37',

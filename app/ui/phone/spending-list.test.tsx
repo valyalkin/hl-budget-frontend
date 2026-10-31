@@ -18,12 +18,15 @@ describe('SpendingList', () => {
       <SpendingList spendings={spendings as Spending[]} label="October 2026" />,
     );
     const row = screen.getByRole('button', {
-      name: 'Oct 27, Neighbourhood Market, Groceries, $84.37',
+      name: /^Oct 27,\s*Groceries,\s*\$84\.37,\s*Neighbourhood Market$/,
     });
     expect(row).toHaveTextContent('Oct 27');
     expect(row).toHaveTextContent('Groceries');
     expect(row).toHaveTextContent('$84.37');
-    expect(row).not.toHaveTextContent('Neighbourhood Market');
+    // The merchant is for screen readers only.
+    expect(within(row).getByText(/Neighbourhood Market/)).toHaveClass(
+      'sr-only',
+    );
     expect(within(row).getByText('Groceries')).toHaveClass('truncate');
   });
 

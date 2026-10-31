@@ -65,7 +65,7 @@ describe('PhoneReview', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', {
-        name: 'Corner Bakery, Oct 25, No category, Visa, $12.40, needs attention',
+        name: /^Corner Bakery,\s*Oct 25 · No category · Visa,\s*\$12\.40,\s*needs attention$/,
       }),
     ).toBeInTheDocument();
     expect(screen.getByText('No amount')).toHaveClass('text-warn');

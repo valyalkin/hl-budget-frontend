@@ -6,16 +6,6 @@ import { formatMoney, shortDate } from '@/app/lib/utils';
 import { PlusIcon } from '@/app/ui/phone/icons';
 import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
 
-/** What a row says to a screen reader, merchant included though it isn't shown (FR-021). */
-export function spendingLabel(spending: Spending): string {
-  return [
-    shortDate(spending.date),
-    spending.merchant,
-    spending.category.name,
-    formatMoney(spending.amount),
-  ].join(', ');
-}
-
 /**
  * The month's spendings, newest first (FR-018): date, category and amount; a tap opens it. The
  * floating Add spending button stays on screen while the list scrolls (FR-020).
@@ -41,7 +31,6 @@ export default function SpendingList({
               <li key={spending.id}>
                 <button
                   type="button"
-                  aria-label={spendingLabel(spending)}
                   onClick={() =>
                     open({ kind: 'edit', spendingId: spending.id })
                   }
@@ -49,12 +38,16 @@ export default function SpendingList({
                 >
                   <span className="text-sm text-muted tabular-nums">
                     {shortDate(spending.date)}
+                    <span className="sr-only">, </span>
                   </span>
                   <span className="truncate font-medium">
                     {spending.category.name}
+                    <span className="sr-only">, </span>
                   </span>
+                  {/* The merchant isn't shown, but screen readers hear it (FR-021). */}
                   <span className="font-mono font-medium tabular-nums">
                     {formatMoney(spending.amount)}
+                    <span className="sr-only">, {spending.merchant}</span>
                   </span>
                 </button>
               </li>
