@@ -128,3 +128,51 @@ export function fieldFor(error: unknown): string | undefined {
   const field = error.errors?.[0]?.field;
   return field?.split('.')[0]?.replace(/(Id|Name)$/, '');
 }
+
+// ---------------------------------------------------------------------------------------------
+// Phone layout (specs/006-mobile-view). Additions only; the desktop strings above are unchanged.
+
+export const PHONE = {
+  deleteTitle: 'Delete this spending?',
+  noCustomCategories: 'No custom categories yet.',
+  categoriesIntro:
+    'Every account starts with the default set. Add your own for anything they don’t cover.',
+  accountsIntro:
+    'The cards, bank accounts and wallets you pay from. Each spending is recorded against one of them.',
+  importIntro:
+    'Upload a CSV export from your bank or card. You’ll check every row before anything is added.',
+  importNoteTitle: 'What the file should contain',
+  importNote:
+    'Columns for date, merchant, category, account and amount, with a header row. The order doesn’t matter, and anything missing can be filled in on the next screen.',
+  tapToFix: 'Tap a row to check or fix it.',
+  noRowsLeft: 'No rows left to import.',
+  allGood: 'All rows look good',
+  merchantMissing: 'Merchant missing',
+  noDate: 'No date',
+  noCategory: 'No category',
+  noAccount: 'No account',
+  noAmount: 'No amount',
+  noSpendingsYet: 'No spendings yet',
+} as const;
+
+/** `No spendings in October 2026.` */
+export function noSpendingsIn(label: string): string {
+  return `No spendings in ${label}.`;
+}
+
+/** `Nothing to break down in October 2026.` */
+export function nothingToBreakDown(label: string): string {
+  return `Nothing to break down in ${label}.`;
+}
+
+/** `Deleted Neighbourhood Market · $64.38` */
+export function deleted(merchant: string, amount: string): string {
+  return `Deleted ${merchant} · ${amount}`;
+}
+
+/** An account's use in Settings: `No spendings yet`, `1 spending recorded`, `12 spendings recorded`. */
+export function accountUsage(count: number): string {
+  return count === 0
+    ? PHONE.noSpendingsYet
+    : `${plural(count, 'spending', 'spendings')} recorded`;
+}

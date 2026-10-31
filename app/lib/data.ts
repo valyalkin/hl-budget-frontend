@@ -130,8 +130,9 @@ export type SpendingsPageData = {
  * 1. the profile and the year's totals (which also say what "today" is);
  * 2. the month itself. A future or invalid month is clamped to today's, which costs one more
  *    totals call only when the clamped month is in another year.
+ * Shared within one render (React `cache`), so the desktop and phone sections load it once.
  */
-export async function loadSpendingsPage(
+export const loadSpendingsPage = cache(async function loadSpendingsPage(
   monthParam: string | undefined,
 ): Promise<SpendingsPageData> {
   const [, firstTotals] = await Promise.all([
@@ -159,4 +160,16 @@ export async function loadSpendingsPage(
     accounts,
     merchants,
   };
+});
+
+/**
+ * The year of the caller's oldest spending, or null when there are none (specs/006-mobile-view
+ * R-004): the phone's Year dropdown runs from the current year down to it.
+ */
+export async function getEarliestSpendingYear(): Promise<number | null> {
+  const page = await read<SpendingPage>(
+    '/api/v1/spendings?sort=date,asc&size=1&page=0',
+  );
+  const first = page.items[0];
+  return first ? Number.parseInt(first.date.slice(0, 4), 10) : null;
 }

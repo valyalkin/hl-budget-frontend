@@ -16,6 +16,9 @@
   --color-error: #a33a16;
   --color-error-tint: #fbeee8;
   --color-disabled: #8a908b;
+  /* Phone import review: values that need attention (4.5:1 on white and on the ground). */
+  --color-warn: #8a4b00;
+  --color-warn-tint: #fdf1de;
 
   /*
    * Category colours for the donut, in rank order. Each is at least 3:1 against white, and
@@ -50,4 +53,9 @@
 /* The native dialog backdrop for Settings. */
 dialog::backdrop {
   background: rgb(23 25 26 / 0.4);
+}
+
+/* Phone layout (specs/006-mobile-view R-005): the page behind a phone screen or sheet stays put. */
+html:has(dialog[data-phone][open]) {
+  overflow: hidden;
 }
