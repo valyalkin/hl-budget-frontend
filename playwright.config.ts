@@ -16,7 +16,20 @@ export default defineConfig({
     trace: 'on-first-retry',
     ignoreHTTPSErrors,
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    // The desktop journeys, unchanged; the phone ones live in e2e/phone/.
+    {
+      name: 'chromium',
+      testIgnore: /phone\//,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // specs/006-mobile-view: a 390px iPhone (touch, mobile UA) on Chromium, so CI needs no WebKit.
+    {
+      name: 'phone',
+      testMatch: /phone\/.*\.spec\.ts/,
+      use: { ...devices['iPhone 13'], browserName: 'chromium' },
+    },
+  ],
   // Production build, so caching and streaming behave as deployed. Against an APP_BASE_URL
   // that already answers /healthz (e.g. the cluster), nothing is started locally.
   webServer: {
