@@ -1,3 +1,6 @@
 # False positive: a made-up UUID used as a test Idempotency-Key in a unit test (since replaced
 # by crypto.randomUUID()). Not a secret. Fingerprint: commit:file:rule:line.
 0cfc30695a53bb1c6e904d0aa7602227b198207f:app/lib/actions.test.ts:generic-api-key:24
+# Same kind of false positive in the phone import review test (specs/006-mobile-view), also
+# replaced by crypto.randomUUID().
+f76f23e54f2aae6b80aaa21011f88a509d4c12de:app/ui/phone/phone-review.test.tsx:generic-api-key:38

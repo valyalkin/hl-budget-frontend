@@ -35,7 +35,7 @@ function setup(list: ImportRow[]) {
   const session: ImportSession = {
     fileName: 'oct.csv',
     rows: list,
-    idempotencyKey: '0b9f6c1e-3c1a-4f2e-9a57-2f1d6c2b8e11',
+    idempotencyKey: crypto.randomUUID(),
   };
   renderPhone(
     <>
