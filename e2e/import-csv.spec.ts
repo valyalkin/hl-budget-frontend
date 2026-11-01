@@ -164,6 +164,61 @@ test.describe('US3: download the sample file', () => {
   });
 });
 
+test.describe('specs/007: an import only uses existing categories and accounts', () => {
+  test('flags unknown names, adds once they are fixed, and creates nothing', async ({
+    page,
+  }) => {
+    const mark = marker('import-unknown');
+    const unknownCategory = `Cat ${mark}`.slice(0, 50);
+    const unknownAccount = `Card ${mark}`.slice(0, 50);
+    await signIn(page);
+    await openImport(page);
+    await chooser(page).setInputFiles(
+      csvFile('unknown.csv', [
+        HEADER,
+        `${dayFirst(1)},${mark} Known,groceries,${E2E_ACCOUNT},4.00`,
+        `${dayFirst(1)},${mark} Typo,${unknownCategory},${E2E_ACCOUNT},5.00`,
+        `${dayFirst(1)},${mark} Card,Groceries,${unknownAccount},6.00`,
+        `${dayFirst(1)},${mark} Empty,,${E2E_ACCOUNT},7.00`,
+      ]),
+    );
+
+    await expect(page.getByText('3 rows need attention')).toBeVisible();
+    await expect(
+      page.getByRole('combobox', { name: 'Category, row 1' }),
+    ).toHaveValue('Groceries');
+    await expect(
+      page.getByRole('combobox', { name: 'Category, row 2' }),
+    ).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByText('Not one of your categories')).toBeVisible();
+    await expect(page.getByText('Not one of your accounts')).toBeVisible();
+    const add = page.getByRole('button', { name: /^Add (\d+ )?spendings?$/ });
+    await expect(add).toBeDisabled();
+
+    await page.getByRole('combobox', { name: 'Category, row 2' }).fill('Taxi');
+    await page
+      .getByRole('combobox', { name: 'Account, row 3' })
+      .fill(E2E_ACCOUNT);
+    await page
+      .getByRole('combobox', { name: 'Category, row 4' })
+      .fill('Groceries');
+    await expect(page.getByText('All rows look good')).toBeVisible();
+    await add.click();
+    await expect(page.getByRole('status')).toHaveText(
+      'Added 4 spendings from unknown.csv',
+    );
+
+    await page.getByRole('button', { name: 'User settings' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Settings' });
+    await expect(dialog.getByText(unknownCategory)).toHaveCount(0);
+    await dialog.getByRole('tab', { name: 'Accounts' }).click();
+    await expect(dialog.getByText(unknownAccount)).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Close settings' }).click();
+
+    await removeImported(page, mark, [monthOfDaysAgo(1)]);
+  });
+});
+
 test.describe('US4: cancel an import', () => {
   test('Escape and Cancel leave without saving, and a re-import starts fresh', async ({
     page,

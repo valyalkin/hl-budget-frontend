@@ -32,7 +32,27 @@ test.describe('US5: where the month’s money went', () => {
     ).toBeVisible();
 
     await card.getByRole('button', { name: 'Pie' }).click();
-    await expect(card.getByRole('img')).toBeVisible();
+    const chart = card.getByRole('group', { name: /^Spending by category/ });
+    await expect(chart).toBeVisible();
+    // specs/007: each slice is filled with its category's colour, the same as its swatch.
+    const groceries = chart.getByRole('img', { name: /^Groceries:/ });
+    const taxi = chart.getByRole('img', { name: /^Taxi:/ });
+    await expect(groceries).toHaveAttribute('fill', '#c2410c');
+    await expect(taxi).toHaveAttribute('fill', '#8a6d00');
+    const fills = await chart
+      .getByRole('img')
+      .evaluateAll((paths) => paths.map((path) => getComputedStyle(path).fill));
+    for (const fill of fills) {
+      expect(fill).toMatch(/^rgb\(/);
+      expect(fill).not.toBe('rgb(0, 0, 0)');
+    }
+    // Hover and keyboard focus name the slice in the centre at once.
+    await groceries.hover();
+    await expect(card.getByTestId('donut-centre')).toContainText('Groceries', {
+      timeout: 500,
+    });
+    await taxi.focus();
+    await expect(card.getByTestId('donut-centre')).toContainText('Taxi');
     await expect(card.getByText('Everything else')).toHaveCount(0);
     await expect(card.getByRole('list', { name: 'Legend' })).toContainText(
       'Taxi',

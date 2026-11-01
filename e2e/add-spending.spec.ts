@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   addSpendingViaUi,
+  E2E_ACCOUNT,
   marker,
   removeSpendingsCreatedBy,
   signIn,
@@ -8,7 +9,7 @@ import {
 } from './support';
 
 test.describe('US2: record a spending in the table', () => {
-  test('a spending dated last month, in a new category, moves the view to last month', async ({
+  test('a spending dated last month moves the view to last month', async ({
     page,
   }) => {
     const mark = marker('add');
@@ -19,7 +20,7 @@ test.describe('US2: record a spending in the table', () => {
 
     await addSpendingViaUi(page, {
       merchant: `${mark} Shop`,
-      category: `Cat ${mark}`.slice(0, 50),
+      category: 'Taxi',
       amount: '12.50',
       previousMonth: true,
     });
@@ -29,16 +30,38 @@ test.describe('US2: record a spending in the table', () => {
     );
     await expect(page.getByText(`${mark} Shop`)).toBeVisible();
 
-    // The new category is now offered in the entry row.
-    await openEntryRow(page);
-    await page.getByRole('combobox', { name: 'Category' }).click();
-    await expect(
-      page.getByRole('option', { name: new RegExp(`Cat ${mark}`) }),
-    ).toBeVisible();
-    await page.keyboard.press('Escape');
-    await page.keyboard.press('Escape');
-
     await removeSpendingsCreatedBy(page, mark);
+  });
+
+  test('a category or account that is not one of the user’s is refused, never created (specs/007)', async ({
+    page,
+  }) => {
+    const mark = marker('unknown');
+    const unknown = `Cat ${mark}`.slice(0, 50);
+    await signIn(page);
+    await openEntryRow(page);
+    await page.getByRole('combobox', { name: 'Merchant' }).fill(`${mark} Shop`);
+    await page.getByRole('combobox', { name: 'Category' }).fill(unknown);
+    await expect(page.getByText(/^Create /)).toHaveCount(0);
+    await page.getByRole('combobox', { name: 'Account' }).fill(E2E_ACCOUNT);
+    await page.getByRole('textbox', { name: /^Amount in / }).fill('3.00');
+    await page.getByRole('button', { name: 'Save spending' }).click();
+    await expect(page.getByText('Not one of your categories')).toBeVisible();
+
+    await page.getByRole('combobox', { name: 'Category' }).fill('Groceries');
+    await page
+      .getByRole('combobox', { name: 'Account' })
+      .fill(`Card ${mark}`.slice(0, 50));
+    await page.getByRole('button', { name: 'Save spending' }).click();
+    await expect(page.getByText('Not one of your accounts')).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel new spending' }).click();
+
+    await page.getByRole('button', { name: 'User settings' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Settings' });
+    await expect(dialog.getByText(unknown)).toHaveCount(0);
+    await dialog.getByRole('tab', { name: 'Accounts' }).click();
+    await expect(dialog.getByText(`Card ${mark}`)).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Close settings' }).click();
   });
 
   test('missing or invalid fields are refused with the spec’s wording', async ({
@@ -51,7 +74,7 @@ test.describe('US2: record a spending in the table', () => {
 
     await page.getByRole('combobox', { name: 'Merchant' }).fill('Bakery');
     await page.getByRole('combobox', { name: 'Category' }).fill('Groceries');
-    await page.getByRole('combobox', { name: 'Account' }).fill('Cash');
+    await page.getByRole('combobox', { name: 'Account' }).fill(E2E_ACCOUNT);
     await page.getByRole('textbox', { name: /^Amount in / }).fill('0');
     await page.getByRole('button', { name: 'Save spending' }).click();
     await expect(

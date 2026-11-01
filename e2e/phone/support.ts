@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page } from '@playwright/test';
-import { completeUniversalLogin } from '../support';
+import { completeUniversalLogin, E2E_ACCOUNT } from '../support';
 
 export {
   csvFile,
@@ -20,12 +20,32 @@ export async function expectPhoneLayout(page: Page) {
   await expect(page.getByRole('combobox', { name: 'Month' })).toBeVisible();
 }
 
-/** Signs in and lands on the phone Spendings screen. */
+/** Signs in and lands on the phone Spendings screen, with E2E_ACCOUNT. */
 export async function signInPhone(page: Page) {
   await page.goto('/auth/login');
   await completeUniversalLogin(page);
   await page.waitForURL('**/spendings**');
   await expectPhoneLayout(page);
+  await ensureE2eAccountPhone(page);
+}
+
+/** Makes sure E2E_ACCOUNT exists, adding it in phone Settings when missing (specs/007 FR-020). */
+async function ensureE2eAccountPhone(page: Page) {
+  await openFromMenu(page, 'Settings');
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  await settings.getByRole('button', { name: 'Accounts' }).click();
+  const remove = settings.getByRole('button', {
+    name: `Remove ${E2E_ACCOUNT}`,
+  });
+  if ((await remove.count()) === 0) {
+    await settings
+      .getByRole('textbox', { name: 'New account' })
+      .fill(E2E_ACCOUNT);
+    await settings.getByRole('button', { name: 'Add account' }).click();
+    await expect(remove).toBeVisible();
+  }
+  await settings.getByRole('button', { name: 'Close settings' }).click();
+  await expect(settings).toBeHidden();
 }
 
 /** The open phone screen or sheet on top, or the phone root when none is open. */
