@@ -13,8 +13,12 @@ Feature specs live in the `hl-budget-spec` repository (`specs/001-platform-found
 - `/`: the signed-out screen (header with Sign in). A signed-in visitor is sent to `/spendings`.
 - `/spendings?month=YYYY-MM`: the month line, the spendings table with inline add, edit and
   delete (keyboard entry with autofill for merchant, category and account), the month total and
-  the By category card (table or donut). The user icon opens Settings for categories and
-  accounts. Gated in `proxy.ts`; `noindex`.
+  the By category card (table or donut). Each category is drawn in its own colour from the API
+  (no CSS variables), and a hovered, focused or tapped slice names itself in the donut's centre
+  (`app/ui/charts/donut-chart.tsx`, shared with the phone). Categories and accounts are chosen
+  from the user's own; an unknown name is "Not one of your categories / accounts" and is never
+  created. The user icon opens Settings, the only place to add categories and accounts. Gated in
+  `proxy.ts`; `noindex`.
   "Import CSV" (above the month total) opens a modal window: drop or choose a CSV, review every
   row in an editable table (same calendar, autofill and keys as the entry row), then add them all
   at once. The file is parsed in the browser (`app/lib/csv.ts`, `app/lib/csv-import.ts`) and never

@@ -112,6 +112,49 @@ describe('ReviewStage with valid rows', () => {
   });
 });
 
+describe('ReviewStage with names that are not the user’s items (specs/007)', () => {
+  it('flags unknown categories and accounts, and adds only once they are fixed', async () => {
+    setup(
+      rows(
+        { category: 'Groceries' },
+        { category: 'Groceriess' },
+        { account: 'Visa Gold' },
+        { category: '' },
+      ),
+    );
+
+    expect(screen.getByText('3 rows need attention')).toBeInTheDocument();
+    expect(addButton()).toBeDisabled();
+    const category2 = screen.getByRole('combobox', { name: 'Category, row 2' });
+    const account3 = screen.getByRole('combobox', { name: 'Account, row 3' });
+    expect(category2).toHaveAttribute('aria-invalid', 'true');
+    expect(account3).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('Not one of your categories')).toBeInTheDocument();
+    expect(screen.getByText('Not one of your accounts')).toBeInTheDocument();
+
+    await userEvent.clear(category2);
+    await userEvent.type(category2, 'groceries');
+    await userEvent.clear(account3);
+    await userEvent.type(account3, 'cash');
+    await userEvent.type(
+      screen.getByRole('combobox', { name: 'Category, row 4' }),
+      'Coffee',
+    );
+
+    expect(screen.getByText('All rows look good')).toBeInTheDocument();
+    expect(addButton()).toBeEnabled();
+    await userEvent.click(addButton());
+    expect(importSpendings.mock.calls[0]?.[0].lookups).toEqual({
+      categories: [
+        { name: 'Groceries' },
+        { name: 'Gifts' },
+        { name: 'Coffee' },
+      ],
+      accounts: [{ name: 'Visa' }, { name: 'Cash' }],
+    });
+  });
+});
+
 describe('ReviewStage with rows that need attention', () => {
   const gaps = () =>
     rows(

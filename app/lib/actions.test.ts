@@ -32,7 +32,7 @@ const input = (overrides: Partial<SpendingInput> = {}): SpendingInput => ({
   today: TODAY,
   date: '2026-10-20',
   merchant: ' Riverside Café ',
-  category: { name: 'Coffee' },
+  category: { id: ids.coffee },
   categoryText: 'Coffee',
   account: { id: ids.visa },
   accountText: 'Visa',
@@ -85,7 +85,7 @@ describe('saveSpending', () => {
       date: '2026-10-20',
       merchant: 'Riverside Café',
       amount: { amount: '6.75', currency: 'CAD' },
-      categoryName: 'Coffee',
+      categoryId: ids.coffee,
       accountId: ids.visa,
     });
     expect(refresh).toHaveBeenCalledOnce();
@@ -128,6 +128,54 @@ describe('saveSpending', () => {
       });
     }
     expect(seen).toHaveLength(0);
+  });
+
+  it('refuses a name that is not one of the user’s items, without a call (specs/007)', async () => {
+    const seen = record('post', '/spendings', () => HttpResponse.json({}));
+
+    await expect(
+      saveSpending(
+        input({ category: { name: 'Groceriess' }, categoryText: 'Groceriess' }),
+      ),
+    ).resolves.toEqual({
+      status: 'error',
+      field: 'category',
+      message: 'Not one of your categories',
+    });
+    await expect(
+      saveSpending(
+        input({ account: { name: 'Visa Gold' }, accountText: 'Visa Gold' }),
+      ),
+    ).resolves.toEqual({
+      status: 'error',
+      field: 'account',
+      message: 'Not one of your accounts',
+    });
+    expect(seen).toHaveLength(0);
+  });
+
+  it('words a server NotFound on a name as not one of the user’s items', async () => {
+    record('post', '/spendings', () =>
+      HttpResponse.json(
+        {
+          type: 'urn:problem:hl-budget:unprocessable-entity',
+          errors: [
+            {
+              pointer: '#/categoryId',
+              field: 'categoryId',
+              code: 'NotFound',
+              message: 'is not one of your categories',
+            },
+          ],
+        },
+        { status: 422 },
+      ),
+    );
+    await expect(saveSpending(input())).resolves.toEqual({
+      status: 'error',
+      field: 'category',
+      message: 'Not one of your categories',
+    });
   });
 
   it('words a server refusal and names its field', async () => {
@@ -305,6 +353,10 @@ describe('importSpendings', () => {
     idempotencyKey: KEY,
     today: TODAY,
     currency: 'CAD',
+    lookups: {
+      categories: [{ name: 'Groceries' }, { name: 'Car' }],
+      accounts: [{ name: 'Visa' }, { name: 'Amex' }],
+    },
     ...overrides,
   });
   const receipt = {
@@ -404,6 +456,55 @@ describe('importSpendings', () => {
     await expect(
       importSpendings(importInput({ rows: [] })),
     ).resolves.toMatchObject({ status: 'error' });
+    expect(seen).toHaveLength(0);
+  });
+
+  it('words a server NotFound on a row’s name as not one of the user’s items (specs/007)', async () => {
+    record('post', '/spending-imports', () =>
+      problem({
+        errors: [
+          {
+            pointer: '#/spendings/1/categoryName',
+            field: 'spendings[1].categoryName',
+            code: 'NotFound',
+            message: 'is not one of your categories',
+          },
+          {
+            pointer: '#/spendings/0/accountName',
+            field: 'spendings[0].accountName',
+            code: 'NotFound',
+            message: 'is not one of your accounts',
+          },
+        ],
+      }),
+    );
+
+    await expect(importSpendings(importInput())).resolves.toEqual({
+      status: 'error',
+      message: '2 rows need attention',
+      rowErrors: [
+        { row: 1, field: 'category', message: 'Not one of your categories' },
+        { row: 0, field: 'account', message: 'Not one of your accounts' },
+      ],
+    });
+  });
+
+  it('refuses rows naming unknown items locally, without a call', async () => {
+    const seen = record('post', '/spending-imports', () => problem({}));
+
+    const result = await importSpendings(
+      importInput({
+        rows: [{ key: 'r1', draft: draft({ category: 'Groceriess' }) }],
+      }),
+    );
+
+    expect(result).toEqual({
+      status: 'error',
+      message: '1 row needs attention',
+      rowErrors: [
+        { row: 0, field: 'category', message: 'Not one of your categories' },
+      ],
+    });
     expect(seen).toHaveLength(0);
   });
 

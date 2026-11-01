@@ -41,7 +41,7 @@ export async function completeUniversalLogin(page: Page) {
 export const MONTH_HEADING =
   /^(January|February|March|April|May|June|July|August|September|October|November|December) \d{4}$/;
 
-/** From anywhere: start sign-in and land on the Spendings screen signed in. */
+/** From anywhere: start sign-in and land on the Spendings screen signed in, with E2E_ACCOUNT. */
 export async function signIn(page: Page) {
   await page.goto('/auth/login');
   await completeUniversalLogin(page);
@@ -49,6 +49,29 @@ export async function signIn(page: Page) {
   await expect(
     page.getByRole('heading', { level: 1, name: MONTH_HEADING }),
   ).toBeVisible();
+  await ensureE2eAccount(page);
+}
+
+/**
+ * Makes sure E2E_ACCOUNT exists, adding it in Settings when it does not: accounts are created only
+ * there (specs/007 FR-020).
+ */
+export async function ensureE2eAccount(page: Page) {
+  await page.getByRole('button', { name: 'User settings' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await dialog.getByRole('tab', { name: 'Accounts' }).click();
+  const remove = dialog.getByRole('button', { name: `Remove ${E2E_ACCOUNT}` });
+  if ((await remove.count()) === 0) {
+    await dialog
+      .getByRole('textbox', { name: 'New account' })
+      .fill(E2E_ACCOUNT);
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(remove).toBeVisible();
+  }
+  // The window remembers its section; leave it on Categories, where it starts.
+  await dialog.getByRole('tab', { name: 'Categories' }).click();
+  await dialog.getByRole('button', { name: 'Close settings' }).click();
+  await expect(dialog).toBeHidden();
 }
 
 /** A per-run marker for merchant names, so each spec finds and removes only its own data. */
@@ -56,7 +79,7 @@ export function marker(spec: string): string {
   return `e2e-${spec}-${Date.now().toString(36)}`;
 }
 
-/** The account the specs record on; typing it creates it the first time (FR-035). */
+/** The account the specs record on; signIn adds it in Settings when missing (specs/007). */
 export const E2E_ACCOUNT = 'E2E card';
 
 export type NewSpending = {

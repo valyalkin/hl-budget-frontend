@@ -46,20 +46,35 @@ test.describe('US2 (phone): add a spending', () => {
     await expect(form).toHaveCount(0);
   });
 
-  test('a past merchant fills category and account; a new category is created on save', async ({
+  test('an unknown category is refused; a past merchant fills category and account', async ({
     page,
   }) => {
     const mark = marker('phone-add');
     await signInPhone(page);
+
+    // specs/007: only Settings creates categories.
+    await page.getByRole('button', { name: 'Add spending' }).click();
+    const fresh = page.getByRole('dialog', { name: 'New spending' });
+    await fresh.getByRole('textbox', { name: 'Amount (CAD)' }).fill('1.00');
+    await fresh.getByRole('combobox', { name: 'Merchant' }).fill(`${mark} X`);
+    await fresh
+      .getByRole('combobox', { name: 'Category' })
+      .fill(`${mark} Treats`);
+    await fresh.getByRole('combobox', { name: 'Account' }).fill(E2E_ACCOUNT);
+    await fresh.getByRole('button', { name: 'Add spending' }).click();
+    await expect(fresh.getByRole('alert')).toHaveText(
+      'Not one of your categories',
+    );
+    await fresh.getByRole('button', { name: 'Close without saving' }).click();
+    await expect(fresh).toHaveCount(0);
+
     await addSpendingPhone(page, {
       merchant: `${mark} Bakery`,
-      category: `${mark} Treats`,
+      category: 'Taxi',
       account: E2E_ACCOUNT,
       amount: '12.40',
     });
-    await expect(spendingRow(page, `${mark} Bakery`)).toContainText(
-      `${mark} Treats`,
-    );
+    await expect(spendingRow(page, `${mark} Bakery`)).toContainText('Taxi');
 
     await page.getByRole('button', { name: 'Add spending' }).click();
     const form = page.getByRole('dialog', { name: 'New spending' });
@@ -69,7 +84,7 @@ test.describe('US2 (phone): add a spending', () => {
       .getByRole('option', { name: new RegExp(`${mark} Bakery`) })
       .click();
     await expect(form.getByRole('combobox', { name: 'Category' })).toHaveValue(
-      `${mark} Treats`,
+      'Taxi',
     );
     await expect(form.getByRole('combobox', { name: 'Account' })).toHaveValue(
       E2E_ACCOUNT,
@@ -80,13 +95,6 @@ test.describe('US2 (phone): add a spending', () => {
     await expect(spendingRow(page, `${mark} Bakery`)).toHaveCount(2);
 
     await deletePhoneSpendings(page, mark);
-    // Leave no custom category behind.
-    await page.getByRole('button', { name: 'Account menu' }).click();
-    await page.getByRole('button', { name: 'Settings' }).click();
-    await page.getByRole('button', { name: `Remove ${mark} Treats` }).click();
-    await expect(
-      page.getByRole('button', { name: `Remove ${mark} Treats` }),
-    ).toHaveCount(0);
   });
 
   test('a spending dated in the previous month lands on that month', async ({

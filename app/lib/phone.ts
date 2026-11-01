@@ -1,6 +1,7 @@
 import type { ImportRow } from '@/app/lib/csv-import';
 import {
   type Draft,
+  type DraftLookups,
   type DraftProblem,
   draftProblems,
   type Field,
@@ -73,8 +74,9 @@ export const PHONE_FIELDS = [
 export function firstPhoneProblem(
   draft: Draft,
   today: string,
+  lookups: DraftLookups,
 ): DraftProblem | null {
-  const problems = draftProblems(draft, today);
+  const problems = draftProblems(draft, today, lookups);
   for (const field of PHONE_FIELDS) {
     const message = problems[field];
     if (message) {
@@ -88,11 +90,8 @@ export function firstPhoneProblem(
 // By category: top 6 plus "Everything else" (FR-032)
 
 export const EVERYTHING_ELSE = 'Everything else';
-const CATEGORY_COLORS = Array.from(
-  { length: 6 },
-  (_, i) => `var(--color-cat-${i + 1})`,
-);
-const REST_COLOR = 'var(--color-muted)';
+/** "Everything else" is a neutral grey outside the category palette (specs/007 research R-001). */
+export const REST_COLOR = '#8a908b';
 
 export type CategorySlice = {
   key: string;
@@ -104,17 +103,17 @@ export type CategorySlice = {
 
 /** The `limit` largest categories, and the rest summed as "Everything else" when there are more. */
 export function topCategories(
-  items: readonly { id: string; name: string; cents: number }[],
+  items: readonly { id: string; name: string; cents: number; color: string }[],
   totalCents: number,
   limit = 6,
 ): CategorySlice[] {
   const ranked = [...items].sort((a, b) => b.cents - a.cents);
-  const top = ranked.slice(0, limit).map((item, i) => ({
+  const top = ranked.slice(0, limit).map((item) => ({
     key: item.id,
     name: item.name,
     cents: item.cents,
     share: sharePercent(item.cents, totalCents),
-    color: CATEGORY_COLORS[i] ?? REST_COLOR,
+    color: item.color,
   }));
   const rest = ranked.slice(limit);
   if (rest.length === 0) {
@@ -151,9 +150,10 @@ export function importRowDisplay(
   row: ImportRow,
   today: string,
   currency: string,
+  lookups: DraftLookups,
 ): ImportRowView {
   const { draft } = row;
-  const problems = draftProblems(draft, today);
+  const problems = draftProblems(draft, today, lookups);
   const named = (value: string, problem: string | undefined, empty: string) =>
     problem
       ? { text: value.trim() || empty, warn: true }
@@ -177,9 +177,13 @@ export function importRowDisplay(
   };
 }
 
-function needingAttention(rows: readonly ImportRow[], today: string): number {
+function needingAttention(
+  rows: readonly ImportRow[],
+  today: string,
+  lookups: DraftLookups,
+): number {
   return rows.filter(
-    (row) => Object.keys(draftProblems(row.draft, today)).length > 0,
+    (row) => Object.keys(draftProblems(row.draft, today, lookups)).length > 0,
   ).length;
 }
 
@@ -187,8 +191,9 @@ function needingAttention(rows: readonly ImportRow[], today: string): number {
 export function importBanner(
   rows: readonly ImportRow[],
   today: string,
+  lookups: DraftLookups,
 ): { text: string; ok: boolean } {
-  const count = needingAttention(rows, today);
+  const count = needingAttention(rows, today, lookups);
   return count > 0
     ? { text: needAttention(count), ok: false }
     : { text: PHONE.allGood, ok: true };
@@ -198,8 +203,10 @@ export function importBanner(
 export function importAddLabel(
   rows: readonly ImportRow[],
   today: string,
+  lookups: DraftLookups,
 ): { label: string; disabled: boolean } {
-  const blocked = rows.length === 0 || needingAttention(rows, today) > 0;
+  const blocked =
+    rows.length === 0 || needingAttention(rows, today, lookups) > 0;
   return blocked
     ? { label: addLabel(0), disabled: true }
     : { label: addLabel(rows.length), disabled: false };

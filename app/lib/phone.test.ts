@@ -14,6 +14,10 @@ import {
 } from '@/app/lib/phone';
 
 const TODAY = '2026-10-31';
+const LOOKUPS = {
+  categories: [{ name: 'Groceries' }],
+  accounts: [{ name: 'Visa' }],
+};
 const good: Draft = {
   date: '2026-10-27',
   merchant: 'Corner Bakery',
@@ -94,21 +98,23 @@ describe('firstPhoneProblem', () => {
       account: '',
       amount: '',
     };
-    expect(firstPhoneProblem(empty, TODAY)).toEqual({
+    expect(firstPhoneProblem(empty, TODAY, LOOKUPS)).toEqual({
       field: 'amount',
       message: 'Enter an amount greater than zero.',
     });
   });
 
   it('reports a future date with the desktop message', () => {
-    expect(firstPhoneProblem({ ...good, date: '2026-11-02' }, TODAY)).toEqual({
+    expect(
+      firstPhoneProblem({ ...good, date: '2026-11-02' }, TODAY, LOOKUPS),
+    ).toEqual({
       field: 'date',
       message: 'Pick a date that is today or earlier.',
     });
   });
 
   it('is null for a complete draft', () => {
-    expect(firstPhoneProblem(good, TODAY)).toBeNull();
+    expect(firstPhoneProblem(good, TODAY, LOOKUPS)).toBeNull();
   });
 });
 
@@ -122,10 +128,11 @@ describe('topCategories', () => {
     ['f', 300],
     ['g', 200],
     ['h', 100],
-  ].map(([name, cents]) => ({
+  ].map(([name, cents], i) => ({
     id: String(name),
     name: String(name),
     cents: Number(cents),
+    color: `#00000${i}`,
   }));
 
   it('keeps the 6 largest and sums the rest as Everything else', () => {
@@ -142,9 +149,11 @@ describe('topCategories', () => {
     expect(slices[6]).toMatchObject({
       cents: 300,
       share: 8,
-      color: 'var(--color-muted)',
+      color: '#8a908b',
     });
-    expect(slices[0]).toMatchObject({ share: 22, color: 'var(--color-cat-1)' });
+    // Each top slice keeps its category's own colour (specs/007 FR-004).
+    expect(slices[0]).toMatchObject({ share: 22, color: '#000000' });
+    expect(slices[5]).toMatchObject({ color: '#000005' });
   });
 
   it('has no Everything else with 6 or fewer categories', () => {
@@ -161,7 +170,7 @@ describe('topCategories', () => {
 
 describe('importRowDisplay', () => {
   it('shows a complete row as is', () => {
-    expect(importRowDisplay(row(), TODAY, 'CAD')).toEqual({
+    expect(importRowDisplay(row(), TODAY, 'CAD', LOOKUPS)).toEqual({
       merchant: { text: 'Corner Bakery', warn: false },
       date: { text: 'Oct 27', warn: false },
       category: { text: 'Groceries', warn: false },
@@ -176,6 +185,7 @@ describe('importRowDisplay', () => {
       row({ date: '', merchant: '', category: '', account: '', amount: '' }),
       TODAY,
       'CAD',
+      LOOKUPS,
     );
     expect(view.merchant).toEqual({ text: 'Merchant missing', warn: true });
     expect(view.date).toEqual({ text: 'No date', warn: true });
@@ -187,7 +197,7 @@ describe('importRowDisplay', () => {
 
   it('keeps a future date’s text but marks it', () => {
     expect(
-      importRowDisplay(row({ date: '2026-11-03' }), TODAY, 'CAD').date,
+      importRowDisplay(row({ date: '2026-11-03' }), TODAY, 'CAD', LOOKUPS).date,
     ).toEqual({
       text: 'Nov 3',
       warn: true,
@@ -198,11 +208,11 @@ describe('importRowDisplay', () => {
 describe('importBanner and importAddLabel', () => {
   it('counts rows that need attention and blocks the add', () => {
     const rows = [row({ category: '' }, 'r1'), row({}, 'r2')];
-    expect(importBanner(rows, TODAY)).toEqual({
+    expect(importBanner(rows, TODAY, LOOKUPS)).toEqual({
       text: '1 row needs attention',
       ok: false,
     });
-    expect(importAddLabel(rows, TODAY)).toEqual({
+    expect(importAddLabel(rows, TODAY, LOOKUPS)).toEqual({
       label: 'Add spendings',
       disabled: true,
     });
@@ -210,19 +220,21 @@ describe('importBanner and importAddLabel', () => {
 
   it('says all rows look good and offers to add them', () => {
     const rows = [row({}, 'r1'), row({}, 'r2')];
-    expect(importBanner(rows, TODAY)).toEqual({
+    expect(importBanner(rows, TODAY, LOOKUPS)).toEqual({
       text: 'All rows look good',
       ok: true,
     });
-    expect(importAddLabel(rows, TODAY)).toEqual({
+    expect(importAddLabel(rows, TODAY, LOOKUPS)).toEqual({
       label: 'Add 2 spendings',
       disabled: false,
     });
-    expect(importAddLabel([row()], TODAY).label).toBe('Add 1 spending');
+    expect(importAddLabel([row()], TODAY, LOOKUPS).label).toBe(
+      'Add 1 spending',
+    );
   });
 
   it('blocks the add when no rows remain', () => {
-    expect(importAddLabel([], TODAY)).toEqual({
+    expect(importAddLabel([], TODAY, LOOKUPS)).toEqual({
       label: 'Add spendings',
       disabled: true,
     });

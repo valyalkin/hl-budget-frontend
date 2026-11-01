@@ -128,13 +128,24 @@ test.describe('US6 (phone): import a CSV file', () => {
     await fix.getByRole('combobox', { name: 'Account' }).fill(E2E_ACCOUNT);
     await fix.getByRole('button', { name: 'Save row' }).click();
 
-    for (const name of ['Hardware', 'Cafe']) {
-      await openRow(name);
-      await fix.getByRole('button', { name: /^Date/ }).click();
-      await fix.getByRole('button', { name: 'Today' }).click();
-      await fix.getByRole('button', { name: 'Save row' }).click();
-      await expect(fix).toHaveCount(0);
-    }
+    // "Cash" and the Cafe's category are not the user's items (specs/007): fixed, never created.
+    await openRow('Hardware');
+    await fix.getByRole('button', { name: /^Date/ }).click();
+    await fix.getByRole('button', { name: 'Today' }).click();
+    await fix.getByRole('combobox', { name: 'Account' }).fill(E2E_ACCOUNT);
+    await fix.getByRole('button', { name: 'Save row' }).click();
+    await expect(fix).toHaveCount(0);
+
+    await openRow('Cafe');
+    await fix.getByRole('button', { name: /^Date/ }).click();
+    await fix.getByRole('button', { name: 'Today' }).click();
+    await fix.getByRole('button', { name: 'Save row' }).click();
+    await expect(fix.getByRole('alert')).toHaveText(
+      'Not one of your categories',
+    );
+    await fix.getByRole('combobox', { name: 'Category' }).fill('Groceries');
+    await fix.getByRole('button', { name: 'Save row' }).click();
+    await expect(fix).toHaveCount(0);
 
     // Remove row: at once, no confirmation.
     await openRow('Thrift');
@@ -151,7 +162,7 @@ test.describe('US6 (phone): import a CSV file', () => {
       'Added 9 spendings from phone-import.csv',
     );
 
-    // Clean up: every month the rows landed in, and the new category.
+    // Clean up: every month the rows landed in. No category was created.
     for (const month of new Set([
       monthOfDaysAgo(0),
       monthOfDaysAgo(1),
@@ -161,7 +172,6 @@ test.describe('US6 (phone): import a CSV file', () => {
       await deletePhoneSpendings(page, mark);
     }
     await openFromMenu(page, 'Settings');
-    await page.getByRole('button', { name: `Remove ${coffee}` }).click();
     await expect(
       page.getByRole('button', { name: `Remove ${coffee}` }),
     ).toHaveCount(0);

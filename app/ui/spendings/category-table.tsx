@@ -1,6 +1,12 @@
 import { formatCents, sharePercent } from '@/app/lib/utils';
 
-export type CategoryItem = { id: string; name: string; cents: number };
+export type CategoryItem = {
+  id: string;
+  name: string;
+  cents: number;
+  /** The category's own colour, `#rrggbb` (specs/007 FR-004). */
+  color: string;
+};
 
 /** Each category with spending this month, its amount and share, largest first, then a total (FR-071). */
 export default function CategoryTable({
@@ -30,8 +36,16 @@ export default function CategoryTable({
       <tbody>
         {items.map((item) => (
           <tr key={item.id} className="border-t border-line-soft">
-            <td className="max-w-0 truncate py-2 pr-2" title={item.name}>
-              {item.name}
+            <td className="max-w-0 py-2 pr-2" title={item.name}>
+              <span className="flex min-w-0 items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  data-testid="category-swatch"
+                  className="size-3 shrink-0 rounded-sm"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="truncate">{item.name}</span>
+              </span>
             </td>
             <td className="py-2 text-right font-mono tabular-nums">
               {formatCents(item.cents, currency)}

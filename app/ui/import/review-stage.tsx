@@ -4,7 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useId, useRef, useState, useTransition } from 'react';
 import { importSpendings } from '@/app/lib/actions';
 import type { ImportRow as Row } from '@/app/lib/csv-import';
-import { type Draft, draftProblems, type Field } from '@/app/lib/draft';
+import {
+  type Draft,
+  draftProblems,
+  type Field,
+  namesOnly,
+} from '@/app/lib/draft';
 import { addLabel, needAttention, rowCount } from '@/app/lib/messages';
 import {
   formatCents,
@@ -62,7 +67,7 @@ export default function ReviewStage({
 
   const problemsOf = (row: Row): Problems => ({
     ...serverErrors[row.key],
-    ...draftProblems(row.draft, today),
+    ...draftProblems(row.draft, today, { categories, accounts }),
   });
   const needing = rows.filter(
     (row) => Object.keys(problemsOf(row)).length > 0,
@@ -125,6 +130,7 @@ export default function ReviewStage({
         idempotencyKey,
         today,
         currency,
+        lookups: namesOnly({ categories, accounts }),
       });
       adding.current = false;
       if (result.status === 'ok') {

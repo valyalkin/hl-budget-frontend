@@ -130,7 +130,7 @@ describe('PhoneApp', () => {
     );
     await userEvent.type(
       screen.getByRole('combobox', { name: 'Category' }),
-      'Health',
+      'Coffee',
     );
     await userEvent.click(screen.getByRole('button', { name: 'Save row' }));
     await waitFor(() =>

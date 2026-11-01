@@ -2,12 +2,12 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ByCategoryCard from '@/app/ui/spendings/by-category-card';
-import { sliceColors } from '@/app/ui/spendings/category-colors';
 
 const items = Array.from({ length: 12 }, (_, i) => ({
   id: `id-${i}`,
   name: `Category ${i + 1}`,
   cents: (12 - i) * 1000,
+  color: `#a0b0${String(i).padStart(2, '0')}`,
 }));
 const total = items.reduce((sum, item) => sum + item.cents, 0);
 
@@ -52,19 +52,47 @@ describe('ByCategoryCard', () => {
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    const chart = screen.getByRole('group', {
+      name: /12 categories, largest Category 1/,
+    });
     // One slice per category, each naming itself with its amount and share.
-    expect(
-      within(screen.getByRole('img')).getAllByText(/^Category \d+: \$/),
-    ).toHaveLength(12);
+    const slices = within(chart).getAllByRole('img');
+    expect(slices).toHaveLength(12);
+    expect(slices[0]).toHaveAccessibleName('Category 1: $120.00, 15%');
     expect(screen.queryByText(/Everything else/)).not.toBeInTheDocument();
-    expect(screen.getByRole('img')).toHaveAccessibleName(
-      /12 categories, largest Category 1/,
-    );
     expect(
       within(screen.getByRole('list', { name: 'Legend' })).getAllByRole(
         'listitem',
       ),
     ).toHaveLength(12);
+  });
+
+  it('draws every slice, legend swatch and table swatch in its category’s colour (specs/007)', async () => {
+    renderCard();
+    await userEvent.click(screen.getByRole('button', { name: 'Table' }));
+    const tableSwatches = screen.getAllByTestId('category-swatch');
+    expect(tableSwatches).toHaveLength(12);
+    expect(tableSwatches[3]).toHaveStyle({ backgroundColor: '#a0b003' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    const slices = within(
+      screen.getByRole('group', { name: /^Spending by category/ }),
+    ).getAllByRole('img');
+    const legend = screen.getAllByTestId('legend-swatch');
+    items.forEach((item, i) => {
+      expect(slices[i]).toHaveAttribute('fill', item.color);
+      expect(legend[i]).toHaveStyle({ backgroundColor: item.color });
+    });
+    expect(document.body.innerHTML).not.toContain('var(--color-cat');
+  });
+
+  it('names a hovered slice’s category in the centre (specs/007 US2)', async () => {
+    renderCard();
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    await userEvent.hover(screen.getByRole('img', { name: /^Category 3:/ }));
+    expect(screen.getByTestId('donut-centre')).toHaveTextContent(
+      'Category 3$100.00 · 13%',
+    );
   });
 
   it('keeps the chosen view after a remount, even when storage throws', async () => {
@@ -87,16 +115,5 @@ describe('ByCategoryCard', () => {
     expect(
       screen.getByText('Nothing spent in October 2026.'),
     ).toBeInTheDocument();
-  });
-});
-
-describe('sliceColors', () => {
-  it('never gives neighbours the same colour, including last and first', () => {
-    for (const count of [2, 12, 13, 24, 25]) {
-      const colors = sliceColors(count);
-      colors.forEach((color, i) => {
-        expect(color).not.toBe(colors[(i + 1) % count]);
-      });
-    }
   });
 });

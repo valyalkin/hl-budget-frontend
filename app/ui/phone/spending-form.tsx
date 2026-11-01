@@ -6,6 +6,7 @@ import { useId, useRef, useState, useTransition } from 'react';
 import { saveSpending } from '@/app/lib/actions';
 import type { MerchantOption, NamedItem } from '@/app/lib/definitions';
 import type { Draft, Field } from '@/app/lib/draft';
+import { MESSAGES } from '@/app/lib/messages';
 import { firstPhoneProblem } from '@/app/lib/phone';
 import { exactMatch, longDate } from '@/app/lib/utils';
 import { CalendarIcon, CloseIcon, TrashIcon } from '@/app/ui/phone/icons';
@@ -72,6 +73,7 @@ export default function SpendingForm({
   useKeyboardInset();
   const router = useRouter();
   const ui = usePhoneUi();
+  const noAccounts = accounts.length === 0;
   const id = useId();
   const errorId = `${id}-error`;
   const labels = LABELS[mode];
@@ -94,7 +96,7 @@ export default function SpendingForm({
   const describe = (field: Field) => (invalid(field) ? errorId : undefined);
 
   const save = () => {
-    const problem = firstPhoneProblem(draft, today);
+    const problem = firstPhoneProblem(draft, today, { categories, accounts });
     if (problem) {
       setError(problem);
       if (problem.field === 'date') {
@@ -280,18 +282,33 @@ export default function SpendingForm({
           invalid={invalid('category')}
           describedBy={describe('category')}
         />
-        <SuggestInput
-          label="Account"
-          placeholder="Choose or type"
-          value={draft.account}
-          onChange={(account) => update({ account })}
-          items={accounts}
-          inputRef={(el) => {
-            refs.current.account = el;
-          }}
-          invalid={invalid('account')}
-          describedBy={describe('account')}
-        />
+        {noAccounts ? (
+          <div className="flex flex-col gap-2 rounded-xl bg-surface-2 px-4 py-3 text-base text-ink-2 ring-1 ring-line">
+            <span>{MESSAGES.noAccounts}</span>
+            <button
+              type="button"
+              onClick={() =>
+                ui.replaceTop({ kind: 'settings', tab: 'accounts' })
+              }
+              className="inline-flex min-h-11 items-center self-start font-semibold text-brand underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-brand"
+            >
+              {MESSAGES.openSettings}
+            </button>
+          </div>
+        ) : (
+          <SuggestInput
+            label="Account"
+            placeholder="Choose or type"
+            value={draft.account}
+            onChange={(account) => update({ account })}
+            items={accounts}
+            inputRef={(el) => {
+              refs.current.account = el;
+            }}
+            invalid={invalid('account')}
+            describedBy={describe('account')}
+          />
+        )}
 
         {error ? (
           <p
@@ -319,7 +336,7 @@ export default function SpendingForm({
         <button
           type="button"
           onClick={save}
-          disabled={pending}
+          disabled={pending || noAccounts}
           className="min-h-13 w-full rounded-xl bg-brand px-4 text-base font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:bg-brand-strong disabled:opacity-60"
         >
           {labels.save}

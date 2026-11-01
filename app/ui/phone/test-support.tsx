@@ -39,8 +39,13 @@ export function phoneData(overrides: Partial<PhoneData> = {}): PhoneData {
     categoryTotals: {
       totalCents: 223437,
       items: [
-        { id: ids.rent, name: 'Rent', cents: 215000 },
-        { id: ids.groceries, name: 'Groceries', cents: 8437 },
+        { id: ids.rent, name: 'Rent', cents: 215000, color: '#1e5b45' },
+        {
+          id: ids.groceries,
+          name: 'Groceries',
+          cents: 8437,
+          color: '#c2410c',
+        },
       ],
     },
     categories,

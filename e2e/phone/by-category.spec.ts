@@ -41,9 +41,19 @@ test.describe('US4 (phone): the month by category', () => {
     await checkScreen(page);
 
     await page.getByRole('button', { name: 'Pie' }).click();
-    await expect(
-      page.getByRole('img', { name: /^Donut chart of / }),
-    ).toBeVisible();
+    const chart = page.getByRole('group', { name: /^Donut chart of / });
+    await expect(chart).toBeVisible();
+    // specs/007: every slice has its category's own colour; a tap names it.
+    await expect(chart.getByRole('img', { name: /^Rent:/ })).toHaveAttribute(
+      'fill',
+      '#1e5b45',
+    );
+    await expect(chart.getByRole('img')).toHaveCount(7);
+    await chart.getByRole('img', { name: /^Groceries:/ }).tap();
+    await expect(phoneRoot(page).getByTestId('donut-centre')).toContainText(
+      'Groceries',
+      { timeout: 500 },
+    );
     const legend = phoneRoot(page).getByRole('listitem');
     await expect(legend).toHaveCount(7);
     await expect(legend.last()).toContainText('Everything else');
