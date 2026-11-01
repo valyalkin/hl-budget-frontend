@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import AppHeader from '@/app/ui/app-header';
 
@@ -34,5 +34,23 @@ describe('AppHeader', () => {
     expect(
       screen.queryByRole('link', { name: 'Sign in' }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('AppHeader tabs (specs/009)', () => {
+  it('shows Spendings and Income, marking the page being shown', () => {
+    render(<AppHeader signedIn ledger="income" />);
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(within(nav).getByRole('link', { name: 'Income' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      within(nav).getByRole('link', { name: 'Spendings' }),
+    ).not.toHaveAttribute('aria-current');
+    expect(within(nav).getByRole('link', { name: 'Income' })).toHaveAttribute(
+      'href',
+      '/income',
+    );
   });
 });

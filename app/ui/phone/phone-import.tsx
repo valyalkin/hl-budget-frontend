@@ -19,7 +19,7 @@ import { useLedger } from '@/app/ui/ledger-context';
  */
 export default function PhoneImport({ lookups }: { lookups: ImportLookups }) {
   const ui = usePhoneUi();
-  const { text: ledgerText } = useLedger();
+  const { ledger, text: ledgerText } = useLedger();
   const [error, setError] = useState('');
 
   const onFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +44,7 @@ export default function PhoneImport({ lookups }: { lookups: ImportLookups }) {
       setError(MESSAGES.unreadable);
       return;
     }
-    const result = readImport(text, lookups);
+    const result = readImport(text, lookups, ledger);
     if ('error' in result) {
       setError(
         result.error === 'noRows'

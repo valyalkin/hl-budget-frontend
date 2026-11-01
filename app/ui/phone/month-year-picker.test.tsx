@@ -3,11 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import MonthYearPicker from '@/app/ui/phone/month-year-picker';
 import PhoneHeader from '@/app/ui/phone/phone-header';
+import { LedgerProvider } from '@/app/ui/ledger-context';
 import { renderPhone } from '@/app/ui/phone/test-support';
+import { TODAY } from '@/mocks/fixtures';
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams('month=2026-09'),
 }));
 
 function renderPicker(ym = { year: 2026, month: 10 }) {
@@ -30,6 +33,44 @@ describe('PhoneHeader', () => {
     expect(
       screen.getByRole('button', { name: 'Account menu' }),
     ).toHaveAttribute('aria-haspopup', 'dialog');
+  });
+
+  it('switches between Spendings and Income, keeping the month (specs/009)', () => {
+    renderPhone(
+      <LedgerProvider ledger="income">
+        <PhoneHeader />
+      </LedgerProvider>,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(within(nav).getByRole('link', { name: 'Income' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      within(nav).getByRole('link', { name: 'Spendings' }),
+    ).toHaveAttribute('href', '/spendings?month=2026-09');
+  });
+});
+
+describe('MonthYearPicker for income (specs/009)', () => {
+  it('counts entries and offers the Income view', () => {
+    renderPhone(
+      <LedgerProvider ledger="income">
+        <MonthYearPicker
+          ym={{ year: 2026, month: 10 }}
+          today={TODAY}
+          earliestYear={2025}
+          monthTotal="5120.25"
+          currency="CAD"
+          count={2}
+        />
+      </LedgerProvider>,
+    );
+    expect(screen.getByText('2 entries')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Income' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 });
 

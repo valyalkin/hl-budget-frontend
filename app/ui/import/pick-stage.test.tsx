@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import PickStage from '@/app/ui/import/pick-stage';
 import { lookups } from '@/app/ui/import/test-support';
+import { LedgerProvider } from '@/app/ui/ledger-context';
 
 const CSV =
   'Date,Description,Category,Account,Amount\n28/10/2026,Corner Bakery,groceries,visa,12.40\n';
@@ -155,5 +156,27 @@ describe('PickStage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await userEvent.click(screen.getByRole('button', { name: 'Close import' }));
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('PickStage for income (specs/009)', () => {
+  it('is titled Import income and offers the income sample', () => {
+    render(
+      <LedgerProvider ledger="income">
+        <PickStage
+          headingId="h"
+          lookups={lookups}
+          onRows={vi.fn()}
+          onClose={vi.fn()}
+        />
+      </LedgerProvider>,
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Import income' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /sample/i })).toHaveAttribute(
+      'href',
+      '/sample-income.csv',
+    );
   });
 });

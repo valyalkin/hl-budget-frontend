@@ -26,7 +26,7 @@ export default function PickStage({
   onRows: (fileName: string, rows: ImportRow[]) => void;
   onClose: () => void;
 }) {
-  const { text: ledgerText } = useLedger();
+  const { ledger, text: ledgerText } = useLedger();
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +37,9 @@ export default function PickStage({
     }
     const refusal = checkFile(file);
     if (refusal) {
-      setError(refusal === 'noRows' ? ledgerText.noRowsInFile : MESSAGES[refusal]);
+      setError(
+        refusal === 'noRows' ? ledgerText.noRowsInFile : MESSAGES[refusal],
+      );
       return;
     }
     let text: string;
@@ -47,10 +49,12 @@ export default function PickStage({
       setError(MESSAGES.unreadable);
       return;
     }
-    const result = readImport(text, lookups);
+    const result = readImport(text, lookups, ledger);
     if ('error' in result) {
       setError(
-        result.error === 'noRows' ? ledgerText.noRowsInFile : MESSAGES[result.error],
+        result.error === 'noRows'
+          ? ledgerText.noRowsInFile
+          : MESSAGES[result.error],
       );
       return;
     }

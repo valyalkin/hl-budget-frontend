@@ -11,11 +11,7 @@ import {
   namesOnly,
 } from '@/app/lib/draft';
 import { needAttention, rowCount } from '@/app/lib/messages';
-import {
-  formatCents,
-  parseAmountInput,
-  toCents,
-} from '@/app/lib/utils';
+import { formatCents, parseAmountInput, toCents } from '@/app/lib/utils';
 import { CloseIcon } from '@/app/ui/import/icons';
 import ImportRow from '@/app/ui/import/import-row';
 import type { ImportLookups } from '@/app/ui/import/import-provider';

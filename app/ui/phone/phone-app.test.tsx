@@ -15,6 +15,7 @@ vi.mock('@/app/lib/actions', () => ({
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams('month=2026-10'),
 }));
 
 beforeEach(() => window.history.replaceState(null, '', '/spendings'));
