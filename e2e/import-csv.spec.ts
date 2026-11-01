@@ -157,7 +157,9 @@ test.describe('US3: download the sample file', () => {
 
     await chooser(page).setInputFiles(path);
     await expect(page.getByText(/· 10 rows$/)).toBeVisible();
-    await expect(page.getByText('3 rows need attention')).toBeVisible();
+    // How many rows need attention depends on which of the sample's accounts and categories the
+    // user has (specs/007: unknown names are flagged, never created); at least the 3 gaps do.
+    await expect(page.getByText(/^\d+ rows need attention$/)).toBeVisible();
     // The sample is for looking at: leave without adding it.
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();

@@ -46,8 +46,14 @@ test.describe('US5: where the month’s money went', () => {
       expect(fill).toMatch(/^rgb\(/);
       expect(fill).not.toBe('rgb(0, 0, 0)');
     }
-    // Hover and keyboard focus name the slice in the centre at once.
-    await groceries.hover();
+    // Hover and keyboard focus name the slice in the centre at once. The largest slice starts at
+    // the top and runs clockwise, so a point just right of the top of the ring is on it (a slice's
+    // own bounding-box centre can fall in the hole).
+    const box = await chart.boundingBox();
+    if (!box) throw new Error('The chart has no size');
+    await chart.hover({
+      position: { x: box.width * 0.55, y: box.height * 0.15 },
+    });
     await expect(card.getByTestId('donut-centre')).toContainText('Groceries', {
       timeout: 500,
     });
