@@ -36,6 +36,14 @@ async function top(locator: Locator) {
   return box;
 }
 
+/** `YYYY-MM` of last month, in the browser's time zone like the calendar's "previous month". */
+function previousMonth() {
+  const day = new Date();
+  day.setDate(1);
+  day.setMonth(day.getMonth() - 1);
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}`;
+}
+
 async function cleanUp(page: Page, mark: string, accounts: string[]) {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/spendings');
@@ -167,6 +175,117 @@ test.describe('specs/008 US1 + US2: the month by account on the desktop', () => 
       );
     } finally {
       await cleanUp(page, mark, [first, second]);
+    }
+  });
+
+  test('each account has its own colour, the same every month, and a slice names its account', async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const mark = marker('acct');
+    const names = ['A', 'B', 'C', 'D'].map((letter) => `${mark} ${letter}`);
+    await signIn(page);
+    await removeSpendingsCreatedBy(page, 'e2e-acct-');
+    await removeAccountsStartingWith(page, 'e2e-acct-');
+    for (const name of names) await addAccountInSettings(page, name);
+
+    /** Each of our accounts' table swatch colour in the shown month. */
+    const swatches = async () => {
+      const card = page.getByRole('region', { name: 'By account' });
+      await card.getByRole('button', { name: 'Table' }).click();
+      const colours: Record<string, string> = {};
+      for (const name of names) {
+        colours[name] = await card
+          .getByRole('row')
+          .filter({ hasText: name })
+          .getByTestId('account-swatch')
+          .evaluate((el) => getComputedStyle(el).backgroundColor);
+      }
+      return colours;
+    };
+
+    try {
+      for (const [i, name] of names.entries()) {
+        await addSpendingViaUi(page, {
+          merchant: `${mark} now ${i}`,
+          account: name,
+          amount: `${40 - i * 5}.00`,
+        });
+        await addSpendingViaUi(page, {
+          merchant: `${mark} before ${i}`,
+          account: name,
+          amount: `${10 + i}.00`,
+          previousMonth: true,
+        });
+      }
+
+      // Four accounts, four different visible colours (FR-020, FR-021, SC-004, SC-005).
+      const now = await swatches();
+      expect(new Set(Object.values(now)).size).toBe(4);
+      for (const colour of Object.values(now)) {
+        expect(colour).toMatch(/^rgb\(/);
+        expect(colour).not.toBe('rgb(138, 144, 139)'); // the rolling-deploy grey
+      }
+      // None of the user's other accounts in this month shares them.
+      const card = page.getByRole('region', { name: 'By account' });
+      const allSwatches = await card
+        .getByTestId('account-swatch')
+        .evaluateAll((els) =>
+          els.map((el) => getComputedStyle(el).backgroundColor),
+        );
+      for (const colour of Object.values(now)) {
+        expect(allSwatches.filter((c) => c === colour)).toHaveLength(1);
+      }
+
+      // Slices and legend use the same colours as the table.
+      await card.getByRole('button', { name: 'Pie' }).click();
+      const chart = card.getByRole('group', { name: /^Spending by account/ });
+      for (const name of names) {
+        const slice = chart.getByRole('img', { name: new RegExp(`^${name}:`) });
+        expect(await slice.evaluate((el) => getComputedStyle(el).fill)).toBe(
+          now[name],
+        );
+        const legend = card
+          .getByRole('list', { name: 'Legend' })
+          .getByRole('listitem')
+          .filter({ hasText: name })
+          .getByTestId('account-legend-swatch');
+        expect(
+          await legend.evaluate((el) => getComputedStyle(el).backgroundColor),
+        ).toBe(now[name]);
+      }
+
+      // Hovering names the slice at once and emphasises it; keyboard focus does the same (FR-030, FR-031).
+      const centre = card.getByTestId('donut-centre');
+      for (const name of names) {
+        const slice = chart.getByRole('img', { name: new RegExp(`^${name}:`) });
+        await slice.focus();
+        await expect(centre).toContainText(name, { timeout: 500 });
+      }
+      const box = await chart.boundingBox();
+      if (!box) throw new Error('The chart has no size');
+      await chart.hover({
+        position: { x: box.width * 0.55, y: box.height * 0.15 },
+      });
+      await expect(centre).not.toContainText('Total', { timeout: 500 });
+
+      // The previous month: same colour for each account, whatever its rank.
+      await page.goto(`/spendings?month=${previousMonth()}`);
+      await expect(
+        page.getByRole('region', { name: 'By account' }),
+      ).toContainText(names[0]!);
+      expect(await swatches()).toEqual(now);
+    } finally {
+      await page.goto(`/spendings?month=${previousMonth()}`);
+      await expect(
+        page.getByRole('button', { name: 'Add a spending row' }),
+      ).toBeVisible();
+      await removeSpendingsCreatedBy(page, mark);
+      await page
+        .getByRole('region', { name: 'By account' })
+        .getByRole('button', { name: 'Table' })
+        .click();
+      await cleanUp(page, mark, names);
     }
   });
 

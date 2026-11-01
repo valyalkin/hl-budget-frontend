@@ -45,6 +45,18 @@ test('the Spendings screen in each of its states', async ({ page }) => {
     .getByRole('button', { name: 'Table' })
     .click();
 
+  // specs/008: the By account card in both views.
+  await expectAccessible(page, 'by account: table');
+  await page
+    .getByRole('region', { name: 'By account' })
+    .getByRole('button', { name: 'Pie' })
+    .click();
+  await expectAccessible(page, 'by account: pie');
+  await page
+    .getByRole('region', { name: 'By account' })
+    .getByRole('button', { name: 'Table' })
+    .click();
+
   await page.getByRole('button', { name: 'User settings' }).click();
   await expectAccessible(page, 'settings: categories');
   await page.getByRole('dialog').getByRole('tab', { name: 'Accounts' }).click();

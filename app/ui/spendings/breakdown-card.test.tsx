@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import BreakdownCard from '@/app/ui/spendings/breakdown-card';
@@ -210,6 +210,49 @@ describe('BreakdownCard, by account (specs/008 US1)', () => {
     expect(
       within(categoryCard).getByRole('button', { name: 'Table' }),
     ).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+describe('BreakdownCard, by account: colours and slice labels (specs/008 US2)', () => {
+  it('draws each account’s slice, legend swatch and table swatch in its own colour', async () => {
+    renderAccountCard();
+    // The choice is remembered in memory between tests, so pick Table explicitly.
+    await userEvent.click(screen.getByRole('button', { name: 'Table' }));
+    const tableSwatches = screen.getAllByTestId('account-swatch');
+    expect(screen.queryAllByTestId('category-swatch')).toHaveLength(0);
+    accounts.forEach((account, i) => {
+      expect(tableSwatches[i]).toHaveStyle({ backgroundColor: account.color });
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    const slices = within(
+      screen.getByRole('group', { name: /^Spending by account/ }),
+    ).getAllByRole('img');
+    const legend = screen.getAllByTestId('account-legend-swatch');
+    accounts.forEach((account, i) => {
+      expect(slices[i]).toHaveAttribute('fill', account.color);
+      expect(legend[i]).toHaveStyle({ backgroundColor: account.color });
+    });
+  });
+
+  it('names a hovered slice’s account, amount and share in the centre', async () => {
+    renderAccountCard();
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    await userEvent.hover(screen.getByRole('img', { name: /^Amex:/ }));
+    expect(screen.getByTestId('donut-centre')).toHaveTextContent(
+      'Amex$176.44 · 8%',
+    );
+  });
+
+  it('gives a focused slice the same text for assistive technology', async () => {
+    renderAccountCard();
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    const slice = screen.getByRole('img', { name: 'Cash: $20.00, 1%' });
+    act(() => slice.focus());
+    expect(slice).toHaveFocus();
+    expect(screen.getByTestId('donut-centre')).toHaveTextContent(
+      'Cash$20.00 · 1%',
+    );
   });
 });
 
