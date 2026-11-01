@@ -10,9 +10,13 @@ export {
   monthOfDaysAgo,
 } from '../support';
 
-/** The phone layout's root; the desktop tree is not rendered below 640px. */
+/**
+ * The phone layout's root; the desktop tree is not rendered below 640px. After a client-side
+ * navigation (the Spendings | Income switch, specs/009) Next keeps the previous page hidden in the
+ * DOM, so only the visible root counts.
+ */
 export function phoneRoot(page: Page): Locator {
-  return page.locator('[data-layout="phone"]');
+  return page.locator('[data-layout="phone"]').filter({ visible: true });
 }
 
 export async function expectPhoneLayout(page: Page) {

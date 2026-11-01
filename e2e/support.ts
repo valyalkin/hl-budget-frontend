@@ -68,8 +68,8 @@ export async function ensureE2eAccount(page: Page) {
     await dialog.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(remove).toBeVisible();
   }
-  // The window remembers its section; leave it on Categories, where it starts.
-  await dialog.getByRole('tab', { name: 'Categories' }).click();
+  // The window remembers its section; leave it on Spending categories, where it starts.
+  await dialog.getByRole('tab', { name: 'Spending categories' }).click();
   await dialog.getByRole('button', { name: 'Close settings' }).click();
   await expect(dialog).toBeHidden();
 }
@@ -119,8 +119,8 @@ async function openAccountsSettings(page: Page) {
 
 async function closeSettings(page: Page) {
   const dialog = page.getByRole('dialog', { name: 'Settings' });
-  // The window remembers its section; leave it on Categories, where it starts.
-  await dialog.getByRole('tab', { name: 'Categories' }).click();
+  // The window remembers its section; leave it on Spending categories, where it starts.
+  await dialog.getByRole('tab', { name: 'Spending categories' }).click();
   await dialog.getByRole('button', { name: 'Close settings' }).click();
   await expect(dialog).toBeHidden();
 }

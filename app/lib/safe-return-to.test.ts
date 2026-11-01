@@ -4,12 +4,14 @@ import { safeReturnTo } from '@/app/lib/safe-return-to';
 const base = 'https://hl-budget.example';
 
 describe('safeReturnTo', () => {
-  it.each(['/spendings', '/spendings?x=1', '/spendings?x=1#top'])(
-    'accepts %s',
-    (value) => {
-      expect(safeReturnTo(value, base)).toBe(value);
-    },
-  );
+  it.each([
+    '/spendings',
+    '/spendings?x=1',
+    '/spendings?x=1#top',
+    '/income?month=2026-10',
+  ])('accepts %s', (value) => {
+    expect(safeReturnTo(value, base)).toBe(value);
+  });
 
   it.each([
     'https://example.com',

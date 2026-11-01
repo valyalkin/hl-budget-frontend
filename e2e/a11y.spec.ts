@@ -127,3 +127,39 @@ test('the CSV import window in each of its states', async ({ page }) => {
     ).toBe(true);
   }
 });
+
+test('the Income screen, its cards and Settings sections (specs/009)', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto('/income');
+  await expect(page.getByRole('region', { name: 'Income list' })).toBeVisible();
+  await expectAccessible(page, 'income plain');
+
+  await page.getByRole('button', { name: 'Add an income row' }).click();
+  await expect(page.getByRole('dialog', { name: 'Choose date' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expectAccessible(page, 'income entry row open');
+  await page.keyboard.press('Escape');
+
+  for (const card of ['By category', 'By account']) {
+    await page
+      .getByRole('region', { name: card })
+      .getByRole('button', { name: 'Pie' })
+      .click();
+  }
+  await expectAccessible(page, 'income cards as pies');
+  for (const card of ['By category', 'By account']) {
+    await page
+      .getByRole('region', { name: card })
+      .getByRole('button', { name: 'Table' })
+      .click();
+  }
+
+  await page.getByRole('button', { name: 'User settings' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await dialog.getByRole('tab', { name: 'Income categories' }).click();
+  await expectAccessible(page, 'settings income categories');
+  await dialog.getByRole('tab', { name: 'Spending categories' }).click();
+  await dialog.getByRole('button', { name: 'Close settings' }).click();
+});
