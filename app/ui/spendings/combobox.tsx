@@ -35,8 +35,6 @@ type Props = {
   inputRef?: (element: HTMLInputElement | null) => void;
   invalid?: boolean;
   describedBy?: string;
-  /** Show "Create “x”" when the text names no option (categories and accounts, not merchants). */
-  createHint?: boolean;
   maxLength?: number;
 };
 
@@ -58,7 +56,6 @@ export default function Combobox({
   inputRef,
   invalid = false,
   describedBy,
-  createHint = false,
   maxLength,
 }: Props) {
   const id = useId();
@@ -76,9 +73,7 @@ export default function Combobox({
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const ranked = rankSuggestions(filter, options).slice(0, MAX_SHOWN);
-  const showCreate =
-    createHint && value.trim() !== '' && !exactMatch(value, options);
-  const expanded = open && (ranked.length > 0 || showCreate);
+  const expanded = open && ranked.length > 0;
   useFloating(expanded, ownRef, listRef, { matchWidth: true });
   const floatingRoot = useFloatingRoot();
 
@@ -255,14 +250,6 @@ export default function Combobox({
                   ) : null}
                 </div>
               ))}
-              {showCreate ? (
-                <div
-                  role="presentation"
-                  className="px-3 py-1.5 text-xs text-muted"
-                >
-                  Create “{value.trim()}” on save
-                </div>
-              ) : null}
             </div>,
             floatingRoot,
           )

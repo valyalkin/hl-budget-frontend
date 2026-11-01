@@ -29,7 +29,6 @@ function Harness({
         options={options}
         onCommit={onCommit}
         onKeyDown={(event) => onKeyDown(event.key)}
-        createHint
       />
       <input aria-label="Next" />
     </>
@@ -75,11 +74,12 @@ describe('Combobox', () => {
     expect(input().value).toBe('gifts');
   });
 
-  it('keeps what was typed when nothing matches, and offers to create it', async () => {
+  it('keeps what was typed when nothing matches, and never offers to create it (specs/007)', async () => {
     render(<Harness />);
     await userEvent.type(input(), 'gz');
     expect(input().value).toBe('gz');
-    expect(screen.getByText('Create “gz” on save')).toBeInTheDocument();
+    expect(screen.queryByText(/Create/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
   it('Backspace removes the suggested rest only', async () => {

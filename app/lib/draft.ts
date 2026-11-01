@@ -1,5 +1,5 @@
 import { MESSAGES } from '@/app/lib/messages';
-import { isValidDate, parseAmountInput } from '@/app/lib/utils';
+import { exactMatch, isValidDate, parseAmountInput } from '@/app/lib/utils';
 
 /** The fields of the entry row, in Tab order (FR-053). */
 export const FIELDS = [
@@ -22,17 +22,25 @@ export type Draft = {
 
 export type DraftProblem = { field: Field; message: string };
 
+/** The user's categories and accounts; a draft may only name these (specs/007 FR-021). */
+export type DraftLookups = {
+  categories: readonly { name: string }[];
+  accounts: readonly { name: string }[];
+};
+
 const MAX_MERCHANT = 255;
 const MAX_NAME = 50;
 
 /**
  * Every problem with a draft, by field, worded as in the spec; empty when it can be saved.
  * Mirrors the server's rules; the server stays authoritative. The import review shows all of
- * them at once (specs/004-csv-import FR-022).
+ * them at once (specs/004-csv-import FR-022). A category or account must be one of the user's
+ * items (specs/007 FR-021, FR-022); nothing is created outside Settings.
  */
 export function draftProblems(
   draft: Draft,
   today: string,
+  lookups: DraftLookups,
 ): Partial<Record<Field, string>> {
   const problems: Partial<Record<Field, string>> = {};
   if (!isValidDate(draft.date)) {
@@ -47,10 +55,14 @@ export function draftProblems(
   const category = draft.category.trim();
   if (!category || category.length > MAX_NAME) {
     problems.category = MESSAGES.category;
+  } else if (!exactMatch(category, lookups.categories)) {
+    problems.category = MESSAGES.unknownCategory;
   }
   const account = draft.account.trim();
   if (!account || account.length > MAX_NAME) {
     problems.account = MESSAGES.account;
+  } else if (!exactMatch(account, lookups.accounts)) {
+    problems.account = MESSAGES.unknownAccount;
   }
   if (parseAmountInput(draft.amount) === null) {
     problems.amount = MESSAGES.amount;
@@ -62,11 +74,26 @@ export function draftProblems(
  * The first problem with a draft, in field order (FR-037), worded as in the spec; null when the
  * draft can be saved.
  */
-export function draftProblem(draft: Draft, today: string): DraftProblem | null {
-  const problems = draftProblems(draft, today);
+export function draftProblem(
+  draft: Draft,
+  today: string,
+  lookups: DraftLookups,
+): DraftProblem | null {
+  const problems = draftProblems(draft, today, lookups);
   const field = FIELDS.find((name) => problems[name] !== undefined);
   const message = field ? problems[field] : undefined;
   return field && message ? { field, message } : null;
+}
+
+/** Just the names, which is all a Server Action needs to check a draft against (keeps it small). */
+export function namesOnly(lookups: DraftLookups): {
+  categories: { name: string }[];
+  accounts: { name: string }[];
+} {
+  return {
+    categories: lookups.categories.map(({ name }) => ({ name })),
+    accounts: lookups.accounts.map(({ name }) => ({ name })),
+  };
 }
 
 /** Whether a single field has something in it (for Enter: "move on" versus "save"). */

@@ -1,11 +1,15 @@
 'use client';
 
-import { type KeyboardEvent, useId, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import type { NamedItem } from '@/app/lib/definitions';
 import AccountsPanel from '@/app/ui/settings/accounts-panel';
 import CategoriesPanel from '@/app/ui/settings/categories-panel';
+import {
+  OPEN_SETTINGS_EVENT,
+  type SettingsSection,
+} from '@/app/ui/settings/open-settings';
 
-type Section = 'categories' | 'accounts';
+type Section = SettingsSection;
 const SECTIONS: { id: Section; label: string }[] = [
   { id: 'categories', label: 'Categories' },
   { id: 'accounts', label: 'Accounts' },
@@ -31,6 +35,19 @@ export default function SettingsDialog({
 
   const openDialog = () => dialog.current?.showModal();
   const closeDialog = () => dialog.current?.close();
+
+  // Another part of the page can ask for a section (specs/007 FR-024: "Open Settings").
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const wanted = (event as CustomEvent<Section>).detail;
+      setSection(wanted === 'accounts' ? 'accounts' : 'categories');
+      if (!dialog.current?.open) {
+        dialog.current?.showModal();
+      }
+    };
+    window.addEventListener(OPEN_SETTINGS_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_SETTINGS_EVENT, onOpen);
+  }, []);
 
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {

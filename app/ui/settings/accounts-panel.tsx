@@ -23,8 +23,7 @@ export default function AccountsPanel({
       copy={{
         heading: 'Accounts',
         addLabel: 'New account',
-        empty:
-          'You have no accounts yet. Add one, or type a new account name when you record a spending.',
+        empty: MESSAGES.noAccountsYet,
         emptyName: MESSAGES.accountName,
         refusal: (item, all) => {
           if (item.count > 0) return inUse('account', item.name, item.count);

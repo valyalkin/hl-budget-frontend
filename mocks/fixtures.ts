@@ -81,11 +81,13 @@ export const categoryTotals: CategoryTotals = {
       category: { id: ids.rent, name: 'Rent' },
       total: cad('2150.00'),
       spendingCount: 1,
+      color: '#1e5b45',
     },
     {
       category: { id: ids.groceries, name: 'Groceries' },
       total: cad('84.37'),
       spendingCount: 1,
+      color: '#c2410c',
     },
   ],
 };
@@ -97,10 +99,29 @@ export const categoryList: CategoryList = {
       name: 'Groceries',
       isDefault: true,
       spendingCount: 10,
+      color: '#c2410c',
     },
-    { id: ids.rent, name: 'Rent', isDefault: true, spendingCount: 1 },
-    { id: ids.coffee, name: 'Coffee', isDefault: false, spendingCount: 3 },
-    { id: ids.gifts, name: 'Gifts', isDefault: false, spendingCount: 0 },
+    {
+      id: ids.rent,
+      name: 'Rent',
+      isDefault: true,
+      spendingCount: 1,
+      color: '#1e5b45',
+    },
+    {
+      id: ids.coffee,
+      name: 'Coffee',
+      isDefault: false,
+      spendingCount: 3,
+      color: '#e11d48',
+    },
+    {
+      id: ids.gifts,
+      name: 'Gifts',
+      isDefault: false,
+      spendingCount: 0,
+      color: '#0891b2',
+    },
   ],
 };
 

@@ -81,6 +81,7 @@ export default function PhoneApp({ data }: { data: PhoneData }) {
           <PhoneSettings
             categories={data.categories}
             accounts={data.accounts}
+            initialTab={layer.tab}
           />
         );
       case 'import':
@@ -95,6 +96,7 @@ export default function PhoneApp({ data }: { data: PhoneData }) {
             session={ui.importSession}
             today={data.today}
             currency={data.currency}
+            lookups={{ categories: data.categories, accounts: data.accounts }}
           />
         ) : null;
       case 'fix-row': {

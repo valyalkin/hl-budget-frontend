@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { importSpendings } from '@/app/lib/actions';
 import { added, MESSAGES, PHONE, rowCount } from '@/app/lib/messages';
+import { type DraftLookups, namesOnly } from '@/app/lib/draft';
 import {
   importAddLabel,
   importBanner,
@@ -27,10 +28,12 @@ export default function PhoneReview({
   session,
   today,
   currency,
+  lookups,
 }: {
   session: ImportSession;
   today: string;
   currency: string;
+  lookups: DraftLookups;
 }) {
   const router = useRouter();
   const ui = usePhoneUi();
@@ -38,8 +41,8 @@ export default function PhoneReview({
   const [message, setMessage] = useState('');
   const adding = useRef(false);
   const { rows, fileName, idempotencyKey } = session;
-  const banner = importBanner(rows, today);
-  const button = importAddLabel(rows, today);
+  const banner = importBanner(rows, today, lookups);
+  const button = importAddLabel(rows, today, lookups);
 
   const add = () => {
     if (button.disabled || adding.current) {
@@ -53,6 +56,7 @@ export default function PhoneReview({
         idempotencyKey,
         today,
         currency,
+        lookups: namesOnly(lookups),
       });
       adding.current = result.status === 'ok';
       if (result.status === 'ok') {
@@ -118,7 +122,7 @@ export default function PhoneReview({
         ) : (
           <ul className="divide-y divide-line-soft overflow-hidden rounded-2xl bg-surface ring-1 ring-line">
             {rows.map((row) => {
-              const view = importRowDisplay(row, today, currency);
+              const view = importRowDisplay(row, today, currency, lookups);
               return (
                 <li key={row.key}>
                   <button

@@ -12,6 +12,7 @@ import {
   messageFor,
   needAttention,
   rowCount,
+  violationMessage,
 } from '@/app/lib/messages';
 
 const problem = (
@@ -154,5 +155,49 @@ describe('import messages', () => {
     expect(rowCount(1)).toBe('1 row');
     expect(rowCount(10)).toBe('10 rows');
     expect(rowCount(1000)).toBe('1,000 rows');
+  });
+});
+
+describe('names that are not the user’s items (specs/007)', () => {
+  it('has the new messages worded as in the spec', () => {
+    expect(MESSAGES.unknownCategory).toBe('Not one of your categories');
+    expect(MESSAGES.unknownAccount).toBe('Not one of your accounts');
+    expect(MESSAGES.noAccounts).toBe('Add an account in Settings first.');
+    expect(MESSAGES.openSettings).toBe('Open Settings');
+  });
+
+  it('words a NotFound name refusal by field', () => {
+    const notFound = (field: string) =>
+      problem(422, {
+        errors: [{ field, code: 'NotFound', message: 'is not one of yours' }],
+      });
+    expect(messageFor(notFound('categoryName'))).toBe(
+      'Not one of your categories',
+    );
+    expect(messageFor(notFound('accountName'))).toBe(
+      'Not one of your accounts',
+    );
+    expect(messageFor(notFound('categoryId'))).toBe(
+      'Not one of your categories',
+    );
+  });
+
+  it('maps a violation, row-prefixed or not, to its message', () => {
+    expect(
+      violationMessage({
+        field: 'spendings[2].categoryName',
+        code: 'NotFound',
+      }),
+    ).toBe('Not one of your categories');
+    expect(
+      violationMessage({ field: 'spendings[5].accountName', code: 'NotFound' }),
+    ).toBe('Not one of your accounts');
+    expect(
+      violationMessage({ field: 'spendings[1].date', code: 'NotFuture' }),
+    ).toBe('Pick a date that is today or earlier.');
+    expect(violationMessage({ field: 'categoryName', code: 'Size' })).toBe(
+      'Choose or type a category.',
+    );
+    expect(violationMessage({ field: 'unknown', code: 'X' })).toBeUndefined();
   });
 });

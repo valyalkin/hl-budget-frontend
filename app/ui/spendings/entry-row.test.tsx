@@ -231,14 +231,49 @@ describe('EntryRow', () => {
     expect(saveSpending).not.toHaveBeenCalled();
   });
 
-  it('sends a typed new name as a name, and saves once however often Save is pressed', async () => {
+  it('refuses a category or account that is not one of the user’s, and saves nothing (specs/007)', async () => {
+    renderRow({
+      initial: {
+        date: TODAY,
+        merchant: 'Café',
+        category: 'Groceriess',
+        account: 'Visa',
+        amount: '6.75',
+      },
+    });
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Save spending' }),
+    );
+    expect(screen.getByText('Not one of your categories')).toBeInTheDocument();
+    expect(field('Category')).toHaveAttribute('aria-invalid', 'true');
+    expect(saveSpending).not.toHaveBeenCalled();
+
+    await userEvent.clear(field('Category'));
+    await userEvent.type(field('Category'), 'Gifts');
+    await userEvent.clear(field('Account'));
+    await userEvent.type(field('Account'), 'Visa Gold');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Save spending' }),
+    );
+    expect(screen.getByText('Not one of your accounts')).toBeInTheDocument();
+    expect(saveSpending).not.toHaveBeenCalled();
+  });
+
+  it('shows a typed name as the item’s own name when the field is left', async () => {
+    renderRow();
+    await userEvent.type(field('Account'), ' VISA ');
+    await userEvent.tab();
+    expect(field('Account').value).toBe('Visa');
+  });
+
+  it('sends known items by id, and saves once however often Save is pressed', async () => {
     let finish: (value: unknown) => void = () => {};
     saveSpending.mockReturnValue(new Promise((resolve) => (finish = resolve)));
     renderRow({
       initial: {
         date: TODAY,
         merchant: 'Café',
-        category: 'coffee ',
+        category: 'gifts ',
         account: 'visa',
         amount: '6.75',
       },
@@ -248,7 +283,7 @@ describe('EntryRow', () => {
     await userEvent.click(save);
     expect(saveSpending).toHaveBeenCalledOnce();
     expect(saveSpending.mock.calls[0]?.[0]).toMatchObject({
-      category: { name: 'coffee' },
+      category: { id: ids.gifts },
       account: { id: ids.visa },
     });
     expect(saveSpending.mock.calls[0]?.[0].idempotencyKey).toMatch(
@@ -318,5 +353,21 @@ describe('EntryRow', () => {
     );
     expect(onCancel).toHaveBeenCalledTimes(2);
     expect(saveSpending).not.toHaveBeenCalled();
+  });
+
+  it('sends a user with no accounts to Settings instead of an account field (specs/007 FR-024)', async () => {
+    const onOpenSettings = vi.fn();
+    renderRow({ accounts: [], onOpenSettings });
+    expect(screen.queryByRole('combobox', { name: 'Account' })).toBeNull();
+    expect(
+      screen.getByText('Add an account in Settings first.'),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Open Settings' }),
+    );
+    expect(onOpenSettings).toHaveBeenCalledOnce();
+    expect(
+      screen.getByRole('button', { name: 'Save spending' }),
+    ).toBeDisabled();
   });
 });

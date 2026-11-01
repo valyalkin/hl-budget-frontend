@@ -20,7 +20,7 @@ import {
 } from '@/app/lib/draft';
 import {
   fieldFor,
-  fieldMessage,
+  violationMessage,
   MESSAGES,
   messageFor,
   needAttention,
@@ -40,7 +40,10 @@ export type ActionResult<T extends object = object> =
 const SIGNED_OUT = { status: 'signed-out' } as const;
 const uuid = z.uuid();
 
-/** Either an existing item's id (picked or typed exactly) or a new name. */
+/**
+ * Either an existing item's id (picked or typed exactly) or the typed name. A name alone is not one
+ * of the user's items and is refused (specs/007 FR-021): only Settings creates items.
+ */
 const namedRef = z.union([
   z.object({ id: z.uuid() }),
   z.object({ name: z.string().trim().min(1).max(50) }),
@@ -116,6 +119,10 @@ export async function saveSpending(
       amount: value.amount,
     },
     value.today,
+    {
+      categories: 'id' in value.category ? [{ name: value.categoryText }] : [],
+      accounts: 'id' in value.account ? [{ name: value.accountText }] : [],
+    },
   );
   if (problem) {
     return { status: 'error', message: problem.message, field: problem.field };
@@ -276,6 +283,11 @@ const importInput = z.object({
   idempotencyKey: z.uuid(),
   today: z.iso.date(),
   currency: z.string().regex(/^[A-Z]{3}$/),
+  /** The user's category and account names; rows may only use these (specs/007 FR-025). */
+  lookups: z.object({
+    categories: z.array(z.object({ name: z.string() })).max(1000),
+    accounts: z.array(z.object({ name: z.string() })).max(1000),
+  }),
 });
 
 export type ImportInput = z.input<typeof importInput>;
@@ -306,7 +318,7 @@ function rowErrorsOf(error: ApiError): ImportRowError[] {
     if (!match || !field) {
       return [];
     }
-    const message = fieldMessage(field) ?? MESSAGES.unavailable;
+    const message = violationMessage(violation) ?? MESSAGES.unavailable;
     return [{ row: Number(match[1]), field, message }];
   });
 }
@@ -329,10 +341,10 @@ export async function importSpendings(
   if (!parsed.success) {
     return { status: 'error', message: MESSAGES.unavailable };
   }
-  const { rows, idempotencyKey, today, currency } = parsed.data;
+  const { rows, idempotencyKey, today, currency, lookups } = parsed.data;
 
   const local = rows.flatMap(({ draft }, row) => {
-    const problems = draftProblems(draft, today);
+    const problems = draftProblems(draft, today, lookups);
     return FIELDS.flatMap((field) => {
       const message = problems[field];
       return message ? [{ row, field, message }] : [];

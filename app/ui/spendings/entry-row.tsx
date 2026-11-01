@@ -11,7 +11,9 @@ import {
 import { saveSpending } from '@/app/lib/actions';
 import type { MerchantOption, NamedItem } from '@/app/lib/definitions';
 import { type Draft, draftProblem, type Field, FIELDS } from '@/app/lib/draft';
+import { MESSAGES } from '@/app/lib/messages';
 import { exactMatch } from '@/app/lib/utils';
+import { openSettings } from '@/app/ui/settings/open-settings';
 import Combobox from '@/app/ui/spendings/combobox';
 import {
   arrowStep,
@@ -34,12 +36,17 @@ export type EntryRowProps = {
   onCancel: () => void;
   /** The edited spending no longer exists; the table shows `message`. */
   onGone: (message: string) => void;
+  /** With no accounts: opens Settings on Accounts (specs/007 FR-024). */
+  onOpenSettings?: () => void;
 };
 
 const iconButton =
   'inline-flex size-9 items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50';
 
-/** The item's id when the text names one exactly, else the trimmed text as a new name. */
+/**
+ * The item's id when the text names one exactly, else the trimmed text as a name, which the action
+ * refuses (specs/007: only Settings creates items).
+ */
 function refFor(text: string, items: readonly NamedItem[]) {
   const match = exactMatch(text, items);
   return match ? { id: match.id } : { name: text.trim() };
@@ -66,7 +73,9 @@ export default function EntryRow({
   onSaved,
   onCancel,
   onGone,
+  onOpenSettings = () => openSettings('accounts'),
 }: EntryRowProps) {
+  const noAccounts = accounts.length === 0;
   const router = useRouter();
   const errorId = useId();
   const [draft, setDraft] = useState<Draft>(initial);
@@ -91,7 +100,7 @@ export default function EntryRow({
 
   const save = () => {
     const current = latest.current;
-    const problem = draftProblem(current, today);
+    const problem = draftProblem(current, today, { categories, accounts });
     if (problem) {
       setError(problem);
       focus(problem.field);
@@ -178,7 +187,11 @@ export default function EntryRow({
     ) {
       event.preventDefault();
       const following = nextField(field, 1);
-      if (last || !draftProblem(latest.current, today) || !following) {
+      if (
+        last ||
+        !draftProblem(latest.current, today, { categories, accounts }) ||
+        !following
+      ) {
         save();
       } else {
         focus(following);
@@ -243,26 +256,37 @@ export default function EntryRow({
             }}
             invalid={invalid('category')}
             describedBy={described('category')}
-            createHint
             maxLength={50}
           />
         </td>
         <td className={cell}>
-          <Combobox
-            label="Account"
-            placeholder="Account"
-            value={draft.account}
-            onChange={(account) => update({ account })}
-            options={accounts}
-            onKeyDown={(event) => onFieldKeyDown('account', event)}
-            inputRef={(element) => {
-              refs.current.account = element;
-            }}
-            invalid={invalid('account')}
-            describedBy={described('account')}
-            createHint
-            maxLength={50}
-          />
+          {noAccounts ? (
+            <div className="flex flex-col items-start gap-1 text-sm text-ink-2">
+              <span>{MESSAGES.noAccounts}</span>
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                className="font-medium text-brand underline underline-offset-2 hover:text-brand-strong focus-visible:outline-2 focus-visible:outline-brand"
+              >
+                {MESSAGES.openSettings}
+              </button>
+            </div>
+          ) : (
+            <Combobox
+              label="Account"
+              placeholder="Account"
+              value={draft.account}
+              onChange={(account) => update({ account })}
+              options={accounts}
+              onKeyDown={(event) => onFieldKeyDown('account', event)}
+              inputRef={(element) => {
+                refs.current.account = element;
+              }}
+              invalid={invalid('account')}
+              describedBy={described('account')}
+              maxLength={50}
+            />
+          )}
         </td>
         <td className={`${cell} w-28`}>
           <input
@@ -289,7 +313,7 @@ export default function EntryRow({
             <button
               type="button"
               aria-label={mode === 'add' ? 'Save spending' : 'Save changes'}
-              disabled={pending}
+              disabled={pending || noAccounts}
               onClick={save}
               className={`${iconButton} bg-brand text-white hover:bg-brand-strong`}
             >

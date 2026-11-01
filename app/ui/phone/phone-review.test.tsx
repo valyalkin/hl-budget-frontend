@@ -40,7 +40,15 @@ function setup(list: ImportRow[]) {
   renderPhone(
     <>
       <UiProbe onUi={grab} />
-      <PhoneReview session={session} today={TODAY} currency="CAD" />
+      <PhoneReview
+        session={session}
+        today={TODAY}
+        currency="CAD"
+        lookups={{
+          categories: [{ name: 'Groceries' }],
+          accounts: [{ name: 'Visa' }],
+        }}
+      />
     </>,
   );
   act(() => ui.open({ kind: 'import' }));
@@ -54,6 +62,18 @@ beforeEach(() => {
 });
 
 describe('PhoneReview', () => {
+  it('marks a row whose category or account is not one of the user’s (specs/007)', () => {
+    setup(rows([{ category: 'Groceriess' }, { account: 'Visa Gold' }, {}]));
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '2 rows need attention',
+    );
+    expect(screen.getByText('Groceriess')).toHaveClass('text-warn');
+    expect(screen.getByText('Visa Gold')).toHaveClass('text-warn');
+    expect(
+      screen.getByRole('button', { name: 'Add spendings' }),
+    ).toBeDisabled();
+  });
+
   it('marks rows that need attention and blocks the add', () => {
     setup(rows([{}, { category: '' }, { amount: '' }]));
     expect(screen.getByText('oct.csv · 3 rows')).toBeInTheDocument();
@@ -104,6 +124,10 @@ describe('PhoneReview', () => {
       idempotencyKey: session.idempotencyKey,
       today: TODAY,
       currency: 'CAD',
+      lookups: {
+        categories: [{ name: 'Groceries' }],
+        accounts: [{ name: 'Visa' }],
+      },
     });
     expect(push).toHaveBeenCalledWith('/spendings?month=2026-10', {
       scroll: false,

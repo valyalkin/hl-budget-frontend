@@ -125,7 +125,7 @@ describe('SpendingForm — add', () => {
     await userEvent.type(f.amount(), '12.40');
     await userEvent.type(f.merchant(), 'Corner Bakery');
     await userEvent.type(f.category(), 'groceries');
-    await userEvent.type(f.account(), 'New card');
+    await userEvent.type(f.account(), 'cash');
     const add = screen.getByRole('button', { name: 'Add spending' });
     await userEvent.dblClick(add);
     await waitFor(() =>
@@ -139,7 +139,7 @@ describe('SpendingForm — add', () => {
       amount: '12.40',
       merchant: 'Corner Bakery',
       category: { id: ids.groceries },
-      account: { name: 'New card' },
+      account: { id: ids.cash },
       currency: 'CAD',
     });
     expect(saveSpending.mock.calls[0]?.[0].idempotencyKey).toMatch(
@@ -243,11 +243,48 @@ describe('SpendingForm — fix row', () => {
     expect(onFixSave).not.toHaveBeenCalled();
     await userEvent.type(f.category(), 'Health');
     await userEvent.click(screen.getByRole('button', { name: 'Save row' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Not one of your categories',
+    );
+    expect(onFixSave).not.toHaveBeenCalled();
+    await userEvent.clear(f.category());
+    await userEvent.type(f.category(), 'Coffee');
+    await userEvent.click(screen.getByRole('button', { name: 'Save row' }));
     expect(onFixSave).toHaveBeenCalledWith(
-      expect.objectContaining({ category: 'Health' }),
+      expect.objectContaining({ category: 'Coffee' }),
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove row' }));
     expect(onRemove).toHaveBeenCalledOnce();
+    expect(saveSpending).not.toHaveBeenCalled();
+  });
+});
+
+describe('SpendingForm — no accounts (specs/007 FR-024)', () => {
+  it('points to Settings on Accounts instead of an account field', async () => {
+    setup({ accounts: [] });
+    ui.open({ kind: 'edit' });
+    expect(screen.queryByRole('combobox', { name: 'Account' })).toBeNull();
+    expect(
+      screen.getByText('Add an account in Settings first.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add spending' })).toBeDisabled();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Open Settings' }),
+    );
+    expect(ui.layers.at(-1)).toEqual({ kind: 'settings', tab: 'accounts' });
+  });
+
+  it('refuses an account that is not one of the user’s', async () => {
+    const f = setup();
+    ui.open({ kind: 'edit' });
+    await userEvent.type(f.amount(), '5');
+    await userEvent.type(f.merchant(), 'Kiosk');
+    await userEvent.type(f.category(), 'Coffee');
+    await userEvent.type(f.account(), 'Visa Gold');
+    await userEvent.click(screen.getByRole('button', { name: 'Add spending' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Not one of your accounts',
+    );
     expect(saveSpending).not.toHaveBeenCalled();
   });
 });

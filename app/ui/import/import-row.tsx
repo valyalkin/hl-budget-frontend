@@ -175,7 +175,6 @@ export default function ImportRow({
             }}
             invalid={problems.category !== undefined}
             describedBy={described('category')}
-            createHint
             maxLength={50}
           />
           {hidden('category')}
@@ -193,7 +192,6 @@ export default function ImportRow({
             }}
             invalid={problems.account !== undefined}
             describedBy={described('account')}
-            createHint
             maxLength={50}
           />
           {hidden('account')}

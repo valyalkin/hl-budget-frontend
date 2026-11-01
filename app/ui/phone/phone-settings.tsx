@@ -36,14 +36,17 @@ const removeButton =
 export default function PhoneSettings({
   categories,
   accounts,
+  initialTab = 'categories',
 }: {
   categories: readonly (NamedItem & { isDefault: boolean })[];
   accounts: readonly NamedItem[];
+  /** Which tab opens first; "Open Settings" with no accounts asks for Accounts (specs/007). */
+  initialTab?: Tab;
 }) {
   const router = useRouter();
   const ui = usePhoneUi();
   const id = useId();
-  const [tab, setTab] = useState<Tab>('categories');
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [pending, startTransition] = useTransition();

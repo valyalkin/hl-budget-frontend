@@ -26,6 +26,12 @@ export const MESSAGES = {
   tooLarge:
     'That file is too large. Import at most 1 MB and 1,000 rows at a time.',
   alreadyImported: 'These spendings were already added.',
+  unknownCategory: 'Not one of your categories',
+  unknownAccount: 'Not one of your accounts',
+  noAccounts: 'Add an account in Settings first.',
+  openSettings: 'Open Settings',
+  noAccountsYet:
+    'You have no accounts yet. Add one to start recording spendings.',
 } as const;
 
 /** `1 row needs attention`, `4 rows need attention` (specs/004-csv-import FR-020). */
@@ -65,6 +71,22 @@ export function inUse(
   return resource === 'category'
     ? `${name} is used by ${spendings}, so it can’t be removed.`
     : `${name} has ${spendings}, so it can’t be removed.`;
+}
+
+/**
+ * The message for one violation the API reported: a name that is not one of the user's items
+ * (code `NotFound`, specs/007) or any other field rule. A row prefix (`spendings[2].`) is ignored.
+ */
+export function violationMessage(violation: {
+  field?: string;
+  code?: string;
+}): string | undefined {
+  const field = (violation.field ?? '').replace(/^spendings\[\d+\]\./, '');
+  if (violation.code === 'NotFound') {
+    if (field.startsWith('category')) return MESSAGES.unknownCategory;
+    if (field.startsWith('account')) return MESSAGES.unknownAccount;
+  }
+  return fieldMessage(field);
 }
 
 /** The message for a spending field the API rejected, by its field name. */
@@ -115,7 +137,7 @@ export function messageFor(
   }
   const first = error.errors?.[0];
   if (error.status === 422 && first) {
-    return fieldMessage(first.field) ?? MESSAGES.unavailable;
+    return violationMessage(first) ?? MESSAGES.unavailable;
   }
   return MESSAGES.unavailable;
 }

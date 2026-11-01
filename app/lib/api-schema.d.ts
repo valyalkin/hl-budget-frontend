@@ -164,7 +164,7 @@ export interface paths {
          * Record many spendings at once, all or nothing
          * @description Creates every row as a spending in one step. If any row is invalid, nothing is created and every problem is listed, with a JSON Pointer naming the row (`#/spendings/3/date`).
          *
-         *     Categories and accounts are given by name. Each name is matched against the caller's items ignoring case and surrounding spaces, and created when none matches. A name that appears in several rows, in any letter case, creates one item.
+         *     Categories and accounts are given by name. Each name must match one of the caller's items, ignoring case and surrounding spaces; a name that matches none is refused with NotFound at that row, and nothing is created. Categories and accounts are created only through their own endpoints.
          *
          *     Send an `Idempotency-Key` to make retries safe: repeating an import with the same key and the same rows returns the first import with 200 and `Idempotent-Replayed: true` instead of creating the spendings again.
          */
@@ -412,12 +412,12 @@ export interface components {
              */
             accountId?: string | null;
             /**
-             * @description Instead of categoryId: matched against the caller's categories ignoring case and surrounding spaces, and created when none matches
+             * @description Instead of categoryId: matched against the caller's categories ignoring case and surrounding spaces. Refused (422, NotFound) when none matches; never creates a category
              * @example Coffee
              */
             categoryName?: string | null;
             /**
-             * @description Instead of accountId: matched against the caller's accounts ignoring case and surrounding spaces, and created when none matches
+             * @description Instead of accountId: matched against the caller's accounts ignoring case and surrounding spaces. Refused (422, NotFound) when none matches; never creates an account
              * @example Visa
              */
             accountName?: string | null;
@@ -478,6 +478,11 @@ export interface components {
              * @description How many of the caller's spendings use this category
              */
             readonly spendingCount: number;
+            /**
+             * @description The category's colour in charts. Fixed for the 17 defaults; assigned once to a custom category when it is created and kept after renaming
+             * @example #1e5b45
+             */
+            readonly color: string;
             /** @description True for the 17 categories every user starts with; they cannot be renamed or deleted */
             readonly isDefault: boolean;
         };
@@ -512,12 +517,12 @@ export interface components {
             merchant: string;
             amount: components["schemas"]["Money"];
             /**
-             * @description Matched against the caller's categories ignoring case and surrounding spaces; created when none matches
+             * @description Matched against the caller's categories ignoring case and surrounding spaces. Refused (422, NotFound) when none matches; never creates a category
              * @example Groceries
              */
             categoryName: string;
             /**
-             * @description Matched against the caller's accounts ignoring case and surrounding spaces; created when none matches
+             * @description Matched against the caller's accounts ignoring case and surrounding spaces. Refused (422, NotFound) when none matches; never creates an account
              * @example Visa
              */
             accountName: string;
@@ -645,6 +650,11 @@ export interface components {
              * @example 2
              */
             spendingCount: number;
+            /**
+             * @description The category's colour, the same as Category.color
+             * @example #c2410c
+             */
+            color: string;
         };
         /** @description Spending per category over a date range: only categories with spending, largest first */
         CategoryTotals: {
@@ -840,7 +850,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Invalid fields, each listed in `errors`. Codes include Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture, NotFound (an unknown or another user's category or account) and ExactlyOne (give exactly one of categoryId and categoryName, and of accountId and accountName). On create only, `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for a different spending */
+        /** @description Invalid fields, each listed in `errors`. Codes include Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture, NotFound (an unknown or another user's category or account, by id or by name; a name never creates one) and ExactlyOne (give exactly one of categoryId and categoryName, and of accountId and accountName). On create only, `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for a different spending */
         SpendingValidationFailed: {
             headers: {
                 "X-Request-Id": components["headers"]["X-Request-Id"];
@@ -850,7 +860,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Nothing was created. Every invalid field of every row is listed in `errors`, its pointer naming the row by its 0-based position (`#/spendings/3/amount/amount`). Codes are those of SpendingRequest (Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture), plus Size on `#/spendings` for 0 or more than 1000 rows. `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for different rows */
+        /** @description Nothing was created. Every invalid field of every row is listed in `errors`, its pointer naming the row by its 0-based position (`#/spendings/3/amount/amount`). Codes are those of SpendingRequest (Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture), NotFound on a category or account name that matches none of the caller's items (an import never creates one), plus Size on `#/spendings` for 0 or more than 1000 rows. `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for different rows */
         SpendingImportValidationFailed: {
             headers: {
                 "X-Request-Id": components["headers"]["X-Request-Id"];
