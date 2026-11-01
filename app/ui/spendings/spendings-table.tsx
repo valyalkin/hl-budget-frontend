@@ -13,11 +13,12 @@ import {
   formatMoney,
   monthLabel,
   monthParam,
-  plural,
   type MoneyValue,
   type YearMonth,
 } from '@/app/lib/utils';
+import { ledgerHref } from '@/app/lib/ledger';
 import { useOptionalImport } from '@/app/ui/import/import-provider';
+import { useLedger } from '@/app/ui/ledger-context';
 import EntryRow from '@/app/ui/spendings/entry-row';
 import SpendingRow from '@/app/ui/spendings/spending-row';
 
@@ -47,6 +48,7 @@ export default function SpendingsTable({
   merchants: MerchantOption[];
 }) {
   const router = useRouter();
+  const { ledger, text } = useLedger();
   const [open, setOpen] = useState<OpenRow>(null);
   const [message, setMessage] = useState('');
   const [removing, setRemoving] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export default function SpendingsTable({
     setOpen(null);
     setMessage('');
     if (month !== monthParam(ym)) {
-      router.push(`/spendings?month=${month}`);
+      router.push(ledgerHref(ledger, month));
     }
   };
 
@@ -112,7 +114,7 @@ export default function SpendingsTable({
     setRemoving(spending.id);
     setMessage('');
     startTransition(async () => {
-      const result = await deleteSpending(spending.id);
+      const result = await deleteSpending(spending.id, ledger);
       setRemoving(null);
       if (result.status === 'signed-out') {
         router.replace('/');
@@ -135,12 +137,14 @@ export default function SpendingsTable({
 
   return (
     <section
-      aria-label="Spending list"
+      aria-label={text.listName}
       className="overflow-hidden rounded-2xl bg-surface ring-1 ring-line"
     >
       <div className="overflow-x-auto">
         <table className="w-full min-w-[820px] table-fixed text-sm">
-          <caption className="sr-only">Spendings in {monthLabel(ym)}</caption>
+          <caption className="sr-only">
+            {text.caption} {monthLabel(ym)}
+          </caption>
           <colgroup>
             <col className="w-40" />
             <col />
@@ -155,7 +159,7 @@ export default function SpendingsTable({
                 Date
               </th>
               <th scope="col" className="px-3 py-2.5">
-                Merchant
+                {text.party}
               </th>
               <th scope="col" className="px-3 py-2.5">
                 Category
@@ -169,8 +173,8 @@ export default function SpendingsTable({
               <th scope="col" className="px-2 py-1.5 text-right">
                 <button
                   type="button"
-                  aria-label="Add a spending row"
-                  title="Add a spending row (Enter)"
+                  aria-label={text.addRow}
+                  title={`${text.addRow} (Enter)`}
                   aria-keyshortcuts="Enter"
                   disabled={open !== null}
                   onClick={() => {
@@ -245,13 +249,11 @@ export default function SpendingsTable({
       </div>
       {spendings.length === 0 ? (
         <p className="px-5 py-9 text-center text-muted">
-          No spendings recorded in {monthLabel(ym)}.
+          {text.emptyMonth(monthLabel(ym))}
         </p>
       ) : (
         <div className="flex items-center justify-between border-t border-line px-4 py-3 text-sm">
-          <span className="text-muted">
-            {plural(spendings.length, 'spending', 'spendings')}
-          </span>
+          <span className="text-muted">{text.count(spendings.length)}</span>
           <span className="font-mono font-semibold tabular-nums">
             {formatMoney(monthTotal)}
           </span>

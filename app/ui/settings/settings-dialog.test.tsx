@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ids } from '@/mocks/fixtures';
+import type { SettingsData } from '@/app/lib/definitions';
 import SettingsDialog from '@/app/ui/settings/settings-dialog';
 
 const actions = vi.hoisted(() => ({
@@ -9,6 +10,8 @@ const actions = vi.hoisted(() => ({
   deleteCategory: vi.fn(),
   createAccount: vi.fn(),
   deleteAccount: vi.fn(),
+  createIncomeCategory: vi.fn(),
+  deleteIncomeCategory: vi.fn(),
 }));
 const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock('@/app/lib/actions', () => actions);
@@ -23,13 +26,43 @@ const categories = [
   { id: ids.gifts, name: 'Gifts', count: 0, isDefault: false },
 ];
 
+const incomeCategories = [
+  {
+    id: 'a1b2c3d4-0000-4000-8000-000000000001',
+    name: 'Investments',
+    count: 2,
+    isDefault: true,
+    color: '#1d4ed8',
+  },
+  {
+    id: 'a1b2c3d4-0000-4000-8000-000000000002',
+    name: 'Salary',
+    count: 10,
+    isDefault: true,
+    color: '#1e5b45',
+  },
+  {
+    id: 'a1b2c3d4-0000-4000-8000-000000000003',
+    name: 'Freelance',
+    count: 1,
+    isDefault: false,
+    color: '#e11d48',
+  },
+];
+
 async function open(
-  accounts = [
+  accounts: SettingsData['accounts'] = [
     { id: ids.visa, name: 'Visa', count: 12 },
     { id: ids.cash, name: 'Cash', count: 0 },
   ],
 ) {
-  render(<SettingsDialog categories={categories} accounts={accounts} />);
+  render(
+    <SettingsDialog
+      categories={categories}
+      incomeCategories={incomeCategories}
+      accounts={accounts}
+    />,
+  );
   await userEvent.click(screen.getByRole('button', { name: 'User settings' }));
   return screen.getByRole('dialog', { name: 'Settings' });
 }
@@ -48,9 +81,13 @@ describe('SettingsDialog', () => {
     });
     expect(tabs).toHaveAttribute('aria-orientation', 'vertical');
     expect(
-      within(dialog).getByRole('tab', { name: 'Categories' }),
+      within(dialog).getByRole('tab', { name: 'Spending categories' }),
     ).toHaveAttribute('aria-selected', 'true');
-    within(dialog).getByRole('tab', { name: 'Categories' }).focus();
+    within(dialog).getByRole('tab', { name: 'Spending categories' }).focus();
+    await userEvent.keyboard('{ArrowDown}');
+    expect(
+      within(dialog).getByRole('tab', { name: 'Income categories' }),
+    ).toHaveFocus();
     await userEvent.keyboard('{ArrowDown}');
     expect(within(dialog).getByRole('tab', { name: 'Accounts' })).toHaveFocus();
     expect(
@@ -155,5 +192,67 @@ describe('SettingsDialog', () => {
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'User settings' })).toHaveFocus();
+  });
+
+  it('lists income categories with swatches; one in use cannot be removed (specs/009)', async () => {
+    const dialog = await open();
+    await userEvent.click(
+      within(dialog).getByRole('tab', { name: 'Income categories' }),
+    );
+    expect(
+      within(dialog).getByRole('heading', {
+        name: 'Default income categories · 2',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getAllByTestId('income-category-swatch'),
+    ).toHaveLength(3);
+    expect(within(dialog).getByText('1 entry recorded')).toBeInTheDocument();
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Remove Freelance' }),
+    );
+    expect(
+      within(dialog).getByText(
+        'Freelance is used by 1 entry, so it can’t be removed.',
+      ),
+    ).toBeInTheDocument();
+    expect(actions.deleteIncomeCategory).not.toHaveBeenCalled();
+  });
+
+  it('adds an income category through its own action (specs/009)', async () => {
+    const dialog = await open();
+    await userEvent.click(
+      within(dialog).getByRole('tab', { name: 'Income categories' }),
+    );
+    await userEvent.type(
+      within(dialog).getByRole('textbox', { name: 'New income category' }),
+      'Gifts',
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add' }));
+    await waitFor(() =>
+      expect(actions.createIncomeCategory).toHaveBeenCalledWith('Gifts'),
+    );
+  });
+
+  it('an account used by income shows both counts and is not removed (specs/009)', async () => {
+    const dialog = await open([
+      { id: ids.visa, name: 'Visa', count: 3, incomeCount: 1 },
+      { id: ids.cash, name: 'Cash', count: 0, incomeCount: 0 },
+    ]);
+    await userEvent.click(
+      within(dialog).getByRole('tab', { name: 'Accounts' }),
+    );
+    expect(
+      within(dialog).getByText('3 spendings · 1 income entry'),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Remove Visa' }),
+    );
+    expect(
+      within(dialog).getByText(
+        'Visa has 3 spendings and 1 income entry, so it can’t be removed.',
+      ),
+    ).toBeInTheDocument();
+    expect(actions.deleteAccount).not.toHaveBeenCalled();
   });
 });

@@ -10,6 +10,7 @@ import { MESSAGES, PHONE } from '@/app/lib/messages';
 import { CloseIcon, UploadIcon } from '@/app/ui/phone/icons';
 import PhoneDialog from '@/app/ui/phone/phone-dialog';
 import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
+import { useLedger } from '@/app/ui/ledger-context';
 
 /**
  * Import CSV, step 1 (FR-090 – FR-092): a large Choose file button (no drag and drop on a phone)
@@ -18,6 +19,7 @@ import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
  */
 export default function PhoneImport({ lookups }: { lookups: ImportLookups }) {
   const ui = usePhoneUi();
+  const { text: ledgerText } = useLedger();
   const [error, setError] = useState('');
 
   const onFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -30,7 +32,9 @@ export default function PhoneImport({ lookups }: { lookups: ImportLookups }) {
     setError('');
     const refusal = checkFile(file);
     if (refusal) {
-      setError(MESSAGES[refusal]);
+      setError(
+        refusal === 'noRows' ? ledgerText.noRowsInFile : MESSAGES[refusal],
+      );
       return;
     }
     let text: string;
@@ -42,7 +46,11 @@ export default function PhoneImport({ lookups }: { lookups: ImportLookups }) {
     }
     const result = readImport(text, lookups);
     if ('error' in result) {
-      setError(MESSAGES[result.error]);
+      setError(
+        result.error === 'noRows'
+          ? ledgerText.noRowsInFile
+          : MESSAGES[result.error],
+      );
       return;
     }
     ui.setImportSession({
@@ -56,7 +64,7 @@ export default function PhoneImport({ lookups }: { lookups: ImportLookups }) {
   return (
     <PhoneDialog
       variant="screen"
-      label="Import CSV"
+      label={ledgerText.importTitle}
       onDismiss={() => ui.close()}
     >
       <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface px-2 py-1 pt-[max(0.25rem,env(safe-area-inset-top))]">
@@ -68,7 +76,9 @@ export default function PhoneImport({ lookups }: { lookups: ImportLookups }) {
         >
           <CloseIcon />
         </button>
-        <h1 className="font-display text-lg font-bold">Import CSV</h1>
+        <h1 className="font-display text-lg font-bold">
+          {ledgerText.importTitle}
+        </h1>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5">
         <p className="text-ink-2">{PHONE.importIntro}</p>

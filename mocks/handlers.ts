@@ -8,6 +8,13 @@ import {
   monthlyTotals,
   spendingImport,
   spendingPage,
+  incomeAccountTotals,
+  incomeCategoryList,
+  incomeCategoryTotals,
+  incomeImport,
+  incomeMonthlyTotals,
+  incomePage,
+  incomeSourceList,
 } from './fixtures';
 
 const API = 'http://api.test/api/v1';
@@ -32,5 +39,24 @@ export const handlers: RequestHandler[] = [
   ),
   http.get(`${API}/spending-imports/:id`, () =>
     HttpResponse.json(spendingImport),
+  ),
+  // specs/009: income
+  http.get(`${API}/monthly-income-totals`, ({ request }) => {
+    const year = new URL(request.url).searchParams.get('year');
+    return HttpResponse.json(incomeMonthlyTotals(year ? Number(year) : 2026));
+  }),
+  http.get(`${API}/incomes`, () => HttpResponse.json(incomePage())),
+  http.get(`${API}/income-category-totals`, () =>
+    HttpResponse.json(incomeCategoryTotals),
+  ),
+  http.get(`${API}/income-account-totals`, () =>
+    HttpResponse.json(incomeAccountTotals),
+  ),
+  http.get(`${API}/income-categories`, () =>
+    HttpResponse.json(incomeCategoryList),
+  ),
+  http.get(`${API}/income-sources`, () => HttpResponse.json(incomeSourceList)),
+  http.post(`${API}/income-imports`, () =>
+    HttpResponse.json(incomeImport, { status: 201 }),
   ),
 ];

@@ -1,4 +1,9 @@
-import { getEarliestSpendingYear, loadSpendingsPage } from '@/app/lib/data';
+import {
+  getEarliestYear,
+  getSettingsData,
+  loadLedgerPage,
+} from '@/app/lib/data';
+import type { Ledger } from '@/app/lib/ledger';
 import { toCents } from '@/app/lib/utils';
 import PhoneApp from '@/app/ui/phone/phone-app';
 
@@ -8,13 +13,17 @@ import PhoneApp from '@/app/ui/phone/phone-app';
  */
 export default async function PhoneSection({
   searchParams,
+  ledger = 'spendings',
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+  /** Spendings or income (specs/009). */
+  ledger?: Ledger;
 }) {
   const { month } = await searchParams;
-  const [data, earliestYear] = await Promise.all([
-    loadSpendingsPage(typeof month === 'string' ? month : undefined),
-    getEarliestSpendingYear(),
+  const [data, earliestYear, settings] = await Promise.all([
+    loadLedgerPage(ledger, typeof month === 'string' ? month : undefined),
+    getEarliestYear(ledger),
+    getSettingsData(),
   ]);
   const monthTotal = data.totals.months[data.ym.month - 1];
   return (
@@ -53,6 +62,7 @@ export default async function PhoneSection({
           lastAccount: m.lastAccount,
         })),
         earliestYear,
+        settings,
       }}
     />
   );

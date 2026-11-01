@@ -4,10 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useId, useRef, useState, useTransition } from 'react';
 import { deleteSpending } from '@/app/lib/actions';
 import type { Spending } from '@/app/lib/definitions';
-import { deleted, PHONE } from '@/app/lib/messages';
+import { deleted } from '@/app/lib/messages';
 import { formatMoney, longDate } from '@/app/lib/utils';
 import PhoneDialog from '@/app/ui/phone/phone-dialog';
 import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
+import { useLedger } from '@/app/ui/ledger-context';
 
 /**
  * The delete confirmation (FR-061 – FR-063): a bottom sheet with the spending's merchant, amount
@@ -16,6 +17,7 @@ import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
 export default function DeleteSheet({ spending }: { spending: Spending }) {
   const router = useRouter();
   const ui = usePhoneUi();
+  const { ledger, text } = useLedger();
   const id = useId();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState('');
@@ -29,7 +31,7 @@ export default function DeleteSheet({ spending }: { spending: Spending }) {
     deleting.current = true;
     setMessage('');
     startTransition(async () => {
-      const result = await deleteSpending(spending.id);
+      const result = await deleteSpending(spending.id, ledger);
       deleting.current = result.status === 'ok';
       if (result.status === 'ok') {
         // Close the sheet and the Edit screen, then say what went.
@@ -47,12 +49,12 @@ export default function DeleteSheet({ spending }: { spending: Spending }) {
       variant="sheet"
       role="alertdialog"
       labelledBy={`${id}-title`}
-      backdropLabel="Keep this spending"
+      backdropLabel={text.keep}
       onDismiss={() => ui.close()}
     >
       <div className="flex flex-col gap-3">
         <h2 id={`${id}-title`} className="font-display text-xl font-bold">
-          {PHONE.deleteTitle}
+          {text.deleteTitle}
         </h2>
         <p className="text-ink-2">
           {spending.merchant} · {amount} · {longDate(spending.date)}
@@ -71,7 +73,7 @@ export default function DeleteSheet({ spending }: { spending: Spending }) {
           disabled={pending}
           className="mt-2 min-h-13 rounded-xl bg-error px-4 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-error disabled:opacity-60"
         >
-          Delete spending
+          {text.remove}
         </button>
         <button
           type="button"

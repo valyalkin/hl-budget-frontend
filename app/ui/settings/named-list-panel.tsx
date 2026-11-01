@@ -14,6 +14,10 @@ export type PanelCopy = {
   emptyName: string;
   /** A refusal known before calling the server (in use, last account); null when allowed. */
   refusal: (item: NamedItem, all: readonly NamedItem[]) => string | null;
+  /** The line under each name; spending counts unless given (specs/009: income, both counts). */
+  describe?: (item: NamedItem) => string;
+  /** A colour swatch before each name, when the items have colours (specs/009 FR-091). */
+  colorOf?: (item: NamedItem) => string | undefined;
 };
 
 /** "3 spendings recorded" / "No spendings yet". */
@@ -100,11 +104,25 @@ export default function NamedListPanel({
               key={item.id}
               className="flex items-center justify-between gap-3 px-3 py-2"
             >
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate font-medium" title={item.name}>
-                  {item.name}
+              <span className="flex min-w-0 items-center gap-2.5">
+                {copy.colorOf?.(item) ? (
+                  <span
+                    aria-hidden="true"
+                    data-testid="income-category-swatch"
+                    className="size-3 shrink-0 rounded-sm"
+                    style={{ backgroundColor: copy.colorOf(item) }}
+                  />
+                ) : null}
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate font-medium" title={item.name}>
+                    {item.name}
+                  </span>
+                  <span className="text-xs text-muted">
+                    {(copy.describe ?? ((i: NamedItem) => usage(i.count)))(
+                      item,
+                    )}
+                  </span>
                 </span>
-                <span className="text-xs text-muted">{usage(item.count)}</span>
               </span>
               <button
                 type="button"

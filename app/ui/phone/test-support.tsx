@@ -19,6 +19,22 @@ export const accounts = [
   { id: ids.visa, name: 'Visa', count: 12 },
   { id: ids.cash, name: 'Cash', count: 0 },
 ];
+export const incomeCategories = [
+  {
+    id: 'a1b2c3d4-0000-4000-8000-000000000001',
+    name: 'Investments',
+    count: 2,
+    isDefault: true,
+    color: '#1d4ed8',
+  },
+  {
+    id: 'a1b2c3d4-0000-4000-8000-000000000002',
+    name: 'Salary',
+    count: 10,
+    isDefault: true,
+    color: '#1e5b45',
+  },
+];
 export const merchants = [
   {
     name: 'Neighbourhood Market',
@@ -58,6 +74,7 @@ export function phoneData(overrides: Partial<PhoneData> = {}): PhoneData {
     categories,
     accounts,
     merchants,
+    settings: { categories, incomeCategories, accounts },
     earliestYear: 2025,
     ...overrides,
   };

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { MonthlyTotals } from '@/app/lib/definitions';
+import { ledgerHref, type Ledger } from '@/app/lib/ledger';
 import {
   formatMoney,
   isFutureMonth,
@@ -43,10 +44,13 @@ export default function MonthLine({
   totals,
   selected,
   today,
+  ledger = 'spendings',
 }: {
   totals: MonthlyTotals;
   selected: YearMonth;
   today: string;
+  /** Which ledger's months these are; the links stay on its page (specs/009). */
+  ledger?: Ledger;
 }) {
   const year = totals.year;
   const thisYear = monthOf(today).year;
@@ -57,7 +61,7 @@ export default function MonthLine({
     <section aria-label="Choose month" className="flex flex-col gap-3">
       <div className="flex items-center gap-1">
         <Link
-          href={`/spendings?month=${year - 1}-12`}
+          href={ledgerHref(ledger, `${year - 1}-12`)}
           aria-label="Previous year"
           className={arrowClass}
         >
@@ -77,7 +81,7 @@ export default function MonthLine({
           </button>
         ) : (
           <Link
-            href={`/spendings?month=${monthParam(nextYear)}`}
+            href={ledgerHref(ledger, monthParam(nextYear))}
             aria-label="Next year"
             className={arrowClass}
           >
@@ -113,7 +117,7 @@ export default function MonthLine({
           return (
             <li key={entry.month}>
               <Link
-                href={`/spendings?month=${monthParam(ym)}`}
+                href={ledgerHref(ledger, monthParam(ym))}
                 aria-current={isSelected ? 'date' : undefined}
                 className={`${cellClass} ${
                   isSelected

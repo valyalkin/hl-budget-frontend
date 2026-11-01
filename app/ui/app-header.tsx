@@ -1,7 +1,32 @@
+import { Suspense } from 'react';
+import { LEDGER, LEDGERS, type Ledger } from '@/app/lib/ledger';
+import LedgerTabs from '@/app/ui/ledger-tabs';
 const signInClass =
   'inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
 const signOutClass =
   'inline-flex h-10 items-center rounded-[10px] px-3 text-sm font-medium text-ink-2 hover:bg-line-soft focus-visible:outline-2 focus-visible:outline-brand';
+
+/** The tabs before the current `?month=` is known: plain links, the same look. */
+function StaticTabs({ current }: { current: Ledger }) {
+  return (
+    <nav aria-label="Main" className="flex items-center gap-1">
+      {LEDGERS.map((ledger) => (
+        <a
+          key={ledger}
+          href={LEDGER[ledger].route}
+          aria-current={ledger === current ? 'page' : undefined}
+          className={
+            ledger === current
+              ? 'rounded-md px-2 py-1 text-sm font-semibold text-brand'
+              : 'rounded-md px-2 py-1 text-sm font-medium text-ink-2'
+          }
+        >
+          {LEDGER[ledger].tab}
+        </a>
+      ))}
+    </nav>
+  );
+}
 
 /** The design's mark: three lines on the brand square. */
 function Logo() {
@@ -25,16 +50,19 @@ function Logo() {
 }
 
 /**
- * The app header (FR-001). Signed out: Sign in. Signed in: the Spendings link, the user-settings
+ * The app header (FR-001). Signed out: Sign in. Signed in: the Spendings | Income tabs (specs/009), the user-settings
  * button (passed in as `settingsSlot`, a client component) and Sign out. Sign-in and sign-out are
  * plain links: a prefetched link would start a real login or logout.
  */
 export default function AppHeader({
   signedIn,
   settingsSlot,
+  ledger = 'spendings',
 }: {
   signedIn: boolean;
   settingsSlot?: React.ReactNode;
+  /** The tab being shown (specs/009). */
+  ledger?: Ledger;
 }) {
   return (
     <header className="border-b border-line bg-surface">
@@ -47,15 +75,9 @@ export default function AppHeader({
             </span>
           </div>
           {signedIn ? (
-            <nav aria-label="Main">
-              <a
-                href="/spendings"
-                aria-current="page"
-                className="rounded-md px-2 py-1 text-sm font-semibold text-brand"
-              >
-                Spendings
-              </a>
-            </nav>
+            <Suspense fallback={<StaticTabs current={ledger} />}>
+              <LedgerTabs current={ledger} variant="nav" />
+            </Suspense>
           ) : null}
         </div>
         <div className="flex items-center gap-2">

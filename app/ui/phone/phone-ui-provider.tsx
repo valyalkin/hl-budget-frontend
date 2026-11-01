@@ -18,7 +18,7 @@ export type Layer =
   | { kind: 'menu' }
   | { kind: 'edit'; spendingId?: string }
   | { kind: 'confirm-delete' }
-  | { kind: 'settings'; tab?: 'categories' | 'accounts' }
+  | { kind: 'settings'; tab?: 'categories' | 'income-categories' | 'accounts' }
   | { kind: 'import' }
   | { kind: 'review' }
   | { kind: 'fix-row'; key: string };

@@ -2,11 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { type SyntheticEvent, useEffect, useId, useState } from 'react';
-import { added, MESSAGES } from '@/app/lib/messages';
 import { useImport } from '@/app/ui/import/import-provider';
 import PickStage from '@/app/ui/import/pick-stage';
 import ReviewStage from '@/app/ui/import/review-stage';
 import { FloatingRoot } from '@/app/ui/spendings/use-floating';
+import { useLedger } from '@/app/ui/ledger-context';
+import { ledgerHref } from '@/app/lib/ledger';
 
 /**
  * The CSV import window (US1–US4): a native modal <dialog>, so focus stays inside, the page behind
@@ -16,6 +17,7 @@ import { FloatingRoot } from '@/app/ui/spendings/use-floating';
  */
 export default function ImportDialog() {
   const router = useRouter();
+  const { ledger, text } = useLedger();
   const id = useId();
   const pickHeading = `${id}-pick`;
   const reviewHeading = `${id}-review`;
@@ -70,11 +72,11 @@ export default function ImportDialog() {
             lookups={lookups}
             onCancel={toPick}
             onAdded={(month, count) => {
-              finish(added(count, fileName));
-              router.push(`/spendings?month=${month}`);
+              finish(text.added(count, fileName));
+              router.push(ledgerHref(ledger, month));
             }}
             onAlreadyImported={() => {
-              finish(MESSAGES.alreadyImported);
+              finish(text.alreadyImported);
               router.refresh();
             }}
           />

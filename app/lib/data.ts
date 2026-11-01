@@ -9,14 +9,23 @@ import {
   type AccountTotals,
   type CategoryList,
   type CategoryTotals,
+  type Income,
+  type IncomeAccountTotals,
+  type IncomeCategoryList,
+  type IncomeCategoryTotals,
+  type IncomeMonthlyTotals,
+  type IncomePage,
+  type IncomeSourceList,
   type MerchantList,
   type MonthlyTotals,
   type NamedItem,
+  type SettingsData,
   type Spending,
   type SpendingPage,
   UnauthenticatedError,
   type UserProfile,
 } from '@/app/lib/definitions';
+import type { Ledger } from '@/app/lib/ledger';
 import {
   monthBounds,
   parseMonthParam,
@@ -106,20 +115,160 @@ export const getCategories = cache(
   },
 );
 
-/** The caller's accounts with use counts; shared within one render like getCategories. */
-export const getAccounts = cache(async (): Promise<NamedItem[]> => {
-  const list = await read<AccountList>('/api/v1/accounts');
-  return list.items.map((a) => ({
-    id: a.id,
-    name: a.name,
-    count: a.spendingCount,
-  }));
-});
+/**
+ * The caller's accounts with use counts; shared within one render like getCategories. `count` is
+ * the spendings that use it, `incomeCount` the income entries (specs/009 FR-053).
+ */
+export const getAccounts = cache(
+  async (): Promise<(NamedItem & { incomeCount: number })[]> => {
+    const list = await read<AccountList>('/api/v1/accounts');
+    return list.items.map((a) => ({
+      id: a.id,
+      name: a.name,
+      count: a.spendingCount,
+      incomeCount: a.incomeCount,
+    }));
+  },
+);
+
+/** The caller's income categories, Salary and Investments included (specs/009). */
+export const getIncomeCategories = cache(
+  async (): Promise<(NamedItem & { isDefault: boolean; color: string })[]> => {
+    const list = await read<IncomeCategoryList>('/api/v1/income-categories');
+    return list.items.map((c) => ({
+      id: c.id,
+      name: c.name,
+      count: c.incomeCount,
+      isDefault: c.isDefault,
+      color: c.color,
+    }));
+  },
+);
+
+/** Everything Settings shows, on the Spendings and the Income page (specs/009 FR-090). */
+export async function getSettingsData(): Promise<SettingsData> {
+  const [categories, incomeCategories, accounts] = await Promise.all([
+    getCategories(),
+    getIncomeCategories(),
+    getAccounts(),
+  ]);
+  return { categories, incomeCategories, accounts };
+}
 
 /** The caller's most used merchants, for merchant autofill (R-005). */
 export async function getMerchants(): Promise<MerchantList> {
   return read<MerchantList>('/api/v1/merchants');
 }
+
+// ---------------------------------------------------------------------------------------------
+// Income (specs/009 research R-007). Each reader maps the income resource into the shape the
+// spending screens already show, so the same components draw both: an income's `source` becomes
+// the entry's `merchant`, and `entryCount` / `incomeCount` become `spendingCount`.
+
+/** An income as the shared screens show it: its source in `merchant`. */
+function asEntry(income: Income): Spending {
+  const { source, ...rest } = income;
+  return { ...rest, merchant: source };
+}
+
+async function getMonthIncome(ym: YearMonth): Promise<Spending[]> {
+  const { from, to } = monthBounds(ym);
+  const items: Spending[] = [];
+  let page = 0;
+  let totalPages = 1;
+  while (page < totalPages) {
+    const result = await read<IncomePage>(
+      `/api/v1/incomes?from=${from}&to=${to}&size=100&sort=date,desc&page=${page}`,
+    );
+    items.push(...result.items.map(asEntry));
+    totalPages = result.totalPages;
+    page += 1;
+  }
+  return items;
+}
+
+async function getMonthlyIncomeTotals(year?: number): Promise<MonthlyTotals> {
+  const query = year === undefined ? '' : `?year=${year}`;
+  const totals = await read<IncomeMonthlyTotals>(
+    `/api/v1/monthly-income-totals${query}`,
+  );
+  return {
+    ...totals,
+    months: totals.months.map(({ entryCount, ...month }) => ({
+      ...month,
+      spendingCount: entryCount,
+    })),
+  };
+}
+
+async function getIncomeCategoryTotals(ym: YearMonth): Promise<CategoryTotals> {
+  const { from, to } = monthBounds(ym);
+  const { entryCount, items, ...totals } = await read<IncomeCategoryTotals>(
+    `/api/v1/income-category-totals?from=${from}&to=${to}`,
+  );
+  return {
+    ...totals,
+    spendingCount: entryCount,
+    items: items.map(({ entryCount: n, ...item }) => ({
+      ...item,
+      spendingCount: n,
+    })),
+  };
+}
+
+async function getIncomeAccountTotals(ym: YearMonth): Promise<AccountTotals> {
+  const { from, to } = monthBounds(ym);
+  const { entryCount, items, ...totals } = await read<IncomeAccountTotals>(
+    `/api/v1/income-account-totals?from=${from}&to=${to}`,
+  );
+  return {
+    ...totals,
+    spendingCount: entryCount,
+    items: items.map(({ entryCount: n, ...item }) => ({
+      ...item,
+      spendingCount: n,
+    })),
+  };
+}
+
+async function getIncomeSources(): Promise<MerchantList> {
+  const list = await read<IncomeSourceList>('/api/v1/income-sources');
+  return {
+    truncated: list.truncated,
+    items: list.items.map(({ incomeCount, ...source }) => ({
+      ...source,
+      spendingCount: incomeCount,
+    })),
+  };
+}
+
+/** The reads a ledger's page needs; the server alone decides which endpoints they call. */
+const READERS = {
+  spendings: {
+    totals: getMonthlyTotals,
+    entries: getMonthSpendings,
+    categoryTotals: getCategoryTotals,
+    accountTotals: getAccountTotals,
+    categories: () => getCategories(),
+    merchants: getMerchants,
+    accountCount: (a: { count: number; incomeCount: number }) => a.count,
+  },
+  income: {
+    totals: getMonthlyIncomeTotals,
+    entries: getMonthIncome,
+    categoryTotals: getIncomeCategoryTotals,
+    accountTotals: getIncomeAccountTotals,
+    categories: async () =>
+      (await getIncomeCategories()).map((c) => ({
+        id: c.id,
+        name: c.name,
+        count: c.count,
+        isDefault: c.isDefault,
+      })),
+    merchants: getIncomeSources,
+    accountCount: (a: { count: number; incomeCount: number }) => a.incomeCount,
+  },
+} as const;
 
 export type SpendingsPageData = {
   ym: YearMonth;
@@ -140,12 +289,14 @@ export type SpendingsPageData = {
  *    totals call only when the clamped month is in another year.
  * Shared within one render (React `cache`), so the desktop and phone sections load it once.
  */
-export const loadSpendingsPage = cache(async function loadSpendingsPage(
+export const loadLedgerPage = cache(async function loadLedgerPage(
+  ledger: Ledger,
   monthParam: string | undefined,
 ): Promise<SpendingsPageData> {
+  const reader = READERS[ledger];
   const [, firstTotals] = await Promise.all([
     ensureMyProfile(),
-    getMonthlyTotals(yearOfParam(monthParam)),
+    reader.totals(yearOfParam(monthParam)),
   ]);
   const today = firstTotals.today;
   const ym = parseMonthParam(monthParam, today);
@@ -158,13 +309,13 @@ export const loadSpendingsPage = cache(async function loadSpendingsPage(
     accounts,
     merchants,
   ] = await Promise.all([
-    ym.year === firstTotals.year ? firstTotals : getMonthlyTotals(ym.year),
-    getMonthSpendings(ym),
-    getCategoryTotals(ym),
-    getAccountTotals(ym),
-    getCategories(),
+    ym.year === firstTotals.year ? firstTotals : reader.totals(ym.year),
+    reader.entries(ym),
+    reader.categoryTotals(ym),
+    reader.accountTotals(ym),
+    reader.categories(),
     getAccounts(),
-    getMerchants(),
+    reader.merchants(),
   ]);
   return {
     ym,
@@ -174,18 +325,36 @@ export const loadSpendingsPage = cache(async function loadSpendingsPage(
     categoryTotals,
     accountTotals,
     categories,
-    accounts,
+    // Ranked by use in this ledger, so autofill suggests the accounts income goes into.
+    accounts: accounts.map((a) => ({
+      id: a.id,
+      name: a.name,
+      count: reader.accountCount(a),
+    })),
     merchants,
   };
 });
+
+/** The Spendings page's data (feature 003): the spendings ledger of [loadLedgerPage]. */
+export function loadSpendingsPage(
+  monthParam: string | undefined,
+): Promise<SpendingsPageData> {
+  return loadLedgerPage('spendings', monthParam);
+}
 
 /**
  * The year of the caller's oldest spending, or null when there are none (specs/006-mobile-view
  * R-004): the phone's Year dropdown runs from the current year down to it.
  */
 export async function getEarliestSpendingYear(): Promise<number | null> {
-  const page = await read<SpendingPage>(
-    '/api/v1/spendings?sort=date,asc&size=1&page=0',
+  return getEarliestYear('spendings');
+}
+
+/** The year of the caller's oldest entry in [ledger], or null when there are none (specs/009). */
+export async function getEarliestYear(ledger: Ledger): Promise<number | null> {
+  const resource = ledger === 'income' ? 'incomes' : 'spendings';
+  const page = await read<SpendingPage | IncomePage>(
+    `/api/v1/${resource}?sort=date,asc&size=1&page=0`,
   );
   const first = page.items[0];
   return first ? Number.parseInt(first.date.slice(0, 4), 10) : null;

@@ -9,6 +9,7 @@ import {
   useTransition,
 } from 'react';
 import { saveSpending } from '@/app/lib/actions';
+import { useLedger } from '@/app/ui/ledger-context';
 import type { MerchantOption, NamedItem } from '@/app/lib/definitions';
 import { type Draft, draftProblem, type Field, FIELDS } from '@/app/lib/draft';
 import { MESSAGES } from '@/app/lib/messages';
@@ -77,6 +78,7 @@ export default function EntryRow({
 }: EntryRowProps) {
   const noAccounts = accounts.length === 0;
   const router = useRouter();
+  const { ledger, text } = useLedger();
   const errorId = useId();
   const [draft, setDraft] = useState<Draft>(initial);
   const latest = useRef<Draft>(initial);
@@ -100,7 +102,12 @@ export default function EntryRow({
 
   const save = () => {
     const current = latest.current;
-    const problem = draftProblem(current, today, { categories, accounts });
+    const problem = draftProblem(
+      current,
+      today,
+      { categories, accounts },
+      ledger,
+    );
     if (problem) {
       setError(problem);
       focus(problem.field);
@@ -113,6 +120,7 @@ export default function EntryRow({
     setError(null);
     startTransition(async () => {
       const result = await saveSpending({
+        ledger,
         mode,
         spendingId,
         idempotencyKey: mode === 'add' ? idempotencyKey : undefined,
@@ -189,7 +197,12 @@ export default function EntryRow({
       const following = nextField(field, 1);
       if (
         last ||
-        !draftProblem(latest.current, today, { categories, accounts }) ||
+        !draftProblem(
+          latest.current,
+          today,
+          { categories, accounts },
+          ledger,
+        ) ||
         !following
       ) {
         save();
@@ -228,8 +241,8 @@ export default function EntryRow({
         </td>
         <td className={cell}>
           <Combobox
-            label="Merchant"
-            placeholder="Merchant"
+            label={text.party}
+            placeholder={text.party}
             value={draft.merchant}
             onChange={(merchant) => update({ merchant })}
             options={merchants}
@@ -312,7 +325,7 @@ export default function EntryRow({
           <div className="flex justify-end gap-1">
             <button
               type="button"
-              aria-label={mode === 'add' ? 'Save spending' : 'Save changes'}
+              aria-label={mode === 'add' ? text.saveNew : 'Save changes'}
               disabled={pending || noAccounts}
               onClick={save}
               className={`${iconButton} bg-brand text-white hover:bg-brand-strong`}
@@ -335,9 +348,7 @@ export default function EntryRow({
             </button>
             <button
               type="button"
-              aria-label={
-                mode === 'add' ? 'Cancel new spending' : 'Cancel changes'
-              }
+              aria-label={mode === 'add' ? text.cancelNew : 'Cancel changes'}
               onClick={onCancel}
               className={`${iconButton} text-ink-2 hover:bg-line-soft`}
             >

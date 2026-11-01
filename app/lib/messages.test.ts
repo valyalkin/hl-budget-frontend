@@ -5,9 +5,13 @@ import {
   UnauthenticatedError,
 } from '@/app/lib/definitions';
 import {
+  accountUsage,
   added,
   addLabel,
   fieldFor,
+  fieldMessage,
+  incomeCategoryUsage,
+  inUse,
   MESSAGES,
   messageFor,
   needAttention,
@@ -199,5 +203,43 @@ describe('names that are not the user’s items (specs/007)', () => {
       'Choose or type a category.',
     );
     expect(violationMessage({ field: 'unknown', code: 'X' })).toBeUndefined();
+  });
+});
+
+describe('income wording (specs/009 research R-008)', () => {
+  it('keeps account usage unchanged without income, and names both counts with it', () => {
+    expect(accountUsage(3)).toBe('3 spendings recorded');
+    expect(accountUsage(0, 0)).toBe('No spendings yet');
+    expect(accountUsage(3, 1)).toBe('3 spendings · 1 income entry');
+    expect(incomeCategoryUsage(0)).toBe('No income yet');
+    expect(incomeCategoryUsage(4)).toBe('4 entries recorded');
+  });
+
+  it('words an account in use by income, and an income category in use', () => {
+    expect(inUse('account', 'Amex', 2)).toBe(
+      'Amex has 2 spendings, so it can’t be removed.',
+    );
+    expect(inUse('account', 'Brokerage', 2, 1)).toBe(
+      'Brokerage has 2 spendings and 1 income entry, so it can’t be removed.',
+    );
+    expect(inUse('account', 'Brokerage', 0, 4)).toBe(
+      'Brokerage has 4 income entries, so it can’t be removed.',
+    );
+    expect(inUse('incomeCategory', 'Freelance', 1, 1)).toBe(
+      'Freelance is used by 1 entry, so it can’t be removed.',
+    );
+  });
+
+  it('words violations for income rows and the source field', () => {
+    expect(
+      violationMessage(
+        { field: 'incomes[2].categoryName', code: 'NotFound' },
+        'income',
+      ),
+    ).toBe('Not one of your income categories');
+    expect(fieldMessage('source', 'income')).toBe('Add a source.');
+    expect(violationMessage({ field: 'categoryName', code: 'NotFound' })).toBe(
+      'Not one of your categories',
+    );
   });
 });

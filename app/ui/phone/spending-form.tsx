@@ -15,6 +15,8 @@ import PhoneDialog from '@/app/ui/phone/phone-dialog';
 import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
 import SuggestInput from '@/app/ui/phone/suggest-input';
 import { useKeyboardInset } from '@/app/ui/phone/use-keyboard-inset';
+import { useLedger } from '@/app/ui/ledger-context';
+import { ledgerHref } from '@/app/lib/ledger';
 
 export type FormMode = 'add' | 'edit' | 'fix-row';
 
@@ -76,7 +78,13 @@ export default function SpendingForm({
   const noAccounts = accounts.length === 0;
   const id = useId();
   const errorId = `${id}-error`;
-  const labels = LABELS[mode];
+  const { ledger, text } = useLedger();
+  const labels =
+    mode === 'add'
+      ? { title: text.newTitle, save: text.addButton }
+      : mode === 'edit'
+        ? { title: text.editTitle, save: 'Save changes', remove: text.remove }
+        : LABELS[mode];
   const [draft, setDraft] = useState<Draft>(initial);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [error, setError] = useState<{
@@ -96,7 +104,12 @@ export default function SpendingForm({
   const describe = (field: Field) => (invalid(field) ? errorId : undefined);
 
   const save = () => {
-    const problem = firstPhoneProblem(draft, today, { categories, accounts });
+    const problem = firstPhoneProblem(
+      draft,
+      today,
+      { categories, accounts },
+      ledger,
+    );
     if (problem) {
       setError(problem);
       if (problem.field === 'date') {
@@ -116,6 +129,7 @@ export default function SpendingForm({
     setError(null);
     startTransition(async () => {
       const result = await saveSpending({
+        ledger,
         mode,
         spendingId,
         idempotencyKey: mode === 'add' ? idempotencyKey : undefined,
@@ -133,7 +147,7 @@ export default function SpendingForm({
       saving.current = result.status === 'ok';
       if (result.status === 'ok') {
         ui.close(1, () =>
-          router.push(`/spendings?month=${result.month}`, { scroll: false }),
+          router.push(ledgerHref(ledger, result.month), { scroll: false }),
         );
       } else if (result.status === 'signed-out') {
         router.replace('/');
@@ -248,7 +262,7 @@ export default function SpendingForm({
         </div>
 
         <SuggestInput
-          label="Merchant"
+          label={text.party}
           placeholder="Where did you spend?"
           value={draft.merchant}
           onChange={(merchant) => update({ merchant })}

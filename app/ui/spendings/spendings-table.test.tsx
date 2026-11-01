@@ -177,7 +177,7 @@ describe('SpendingsTable', () => {
         name: 'Remove Neighbourhood Market on Oct 27',
       }),
     );
-    expect(deleteSpending).toHaveBeenCalledWith(ids.spending1);
+    expect(deleteSpending).toHaveBeenCalledWith(ids.spending1, 'spendings');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 

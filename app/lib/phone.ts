@@ -6,7 +6,8 @@ import {
   draftProblems,
   type Field,
 } from '@/app/lib/draft';
-import { addLabel, needAttention, PHONE } from '@/app/lib/messages';
+import { LEDGER, type Ledger } from '@/app/lib/ledger';
+import { needAttention, PHONE } from '@/app/lib/messages';
 import {
   formatCents,
   isFutureMonth,
@@ -75,8 +76,9 @@ export function firstPhoneProblem(
   draft: Draft,
   today: string,
   lookups: DraftLookups,
+  ledger: Ledger = 'spendings',
 ): DraftProblem | null {
-  const problems = draftProblems(draft, today, lookups);
+  const problems = draftProblems(draft, today, lookups, ledger);
   for (const field of PHONE_FIELDS) {
     const message = problems[field];
     if (message) {
@@ -151,16 +153,21 @@ export function importRowDisplay(
   today: string,
   currency: string,
   lookups: DraftLookups,
+  ledger: Ledger = 'spendings',
 ): ImportRowView {
   const { draft } = row;
-  const problems = draftProblems(draft, today, lookups);
+  const problems = draftProblems(draft, today, lookups, ledger);
   const named = (value: string, problem: string | undefined, empty: string) =>
     problem
       ? { text: value.trim() || empty, warn: true }
       : { text: value.trim(), warn: false };
   const amount = parseAmountInput(draft.amount);
   return {
-    merchant: named(draft.merchant, problems.merchant, PHONE.merchantMissing),
+    merchant: named(
+      draft.merchant,
+      problems.merchant,
+      LEDGER[ledger].partyMissingShort,
+    ),
     date: problems.date
       ? {
           text: isValidDate(draft.date) ? shortDate(draft.date) : PHONE.noDate,
@@ -199,12 +206,14 @@ export function importBanner(
     : { text: PHONE.allGood, ok: true };
 }
 
-/** The add button: disabled "Add spendings" while blocked, else "Add N spendings". */
+/** The add button: disabled "Add spendings" while blocked, else "Add N spendings" (or income). */
 export function importAddLabel(
   rows: readonly ImportRow[],
   today: string,
   lookups: DraftLookups,
+  ledger: Ledger = 'spendings',
 ): { label: string; disabled: boolean } {
+  const { addLabel } = LEDGER[ledger];
   const blocked =
     rows.length === 0 || needingAttention(rows, today, lookups) > 0;
   return blocked

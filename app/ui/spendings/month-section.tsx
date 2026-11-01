@@ -1,4 +1,5 @@
-import { loadSpendingsPage } from '@/app/lib/data';
+import { loadLedgerPage } from '@/app/lib/data';
+import type { Ledger } from '@/app/lib/ledger';
 import { monthLabel, toCents } from '@/app/lib/utils';
 import ImportCsvButton from '@/app/ui/import/import-csv-button';
 import BreakdownCard from '@/app/ui/spendings/breakdown-card';
@@ -12,11 +13,15 @@ import SpendingsTable from '@/app/ui/spendings/spendings-table';
  */
 export default async function MonthSection({
   searchParams,
+  ledger = 'spendings',
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+  /** Spendings or income (specs/009); client parts below read it from the LedgerProvider. */
+  ledger?: Ledger;
 }) {
   const { month } = await searchParams;
-  const data = await loadSpendingsPage(
+  const data = await loadLedgerPage(
+    ledger,
     typeof month === 'string' ? month : undefined,
   );
   const { ym, today, totals } = data;
@@ -37,7 +42,7 @@ export default async function MonthSection({
 
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
-      <MonthLine totals={totals} selected={ym} today={today} />
+      <MonthLine totals={totals} selected={ym} today={today} ledger={ledger} />
       <h1 className="font-display text-2xl font-bold tracking-tight">
         {label}
       </h1>
@@ -67,6 +72,7 @@ export default async function MonthSection({
             label={label}
             total={monthTotal?.total ?? { amount: '0.00', currency }}
             count={monthTotal?.spendingCount ?? 0}
+            ledger={ledger}
           />
           <BreakdownCard
             kind="category"

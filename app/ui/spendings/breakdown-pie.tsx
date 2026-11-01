@@ -14,11 +14,14 @@ import {
  */
 export default function BreakdownPie({
   kind,
+  noun = 'Spending',
   items,
   totalCents,
   currency,
 }: {
   kind: BreakdownKind;
+  /** `Spending` or `Income` (specs/009). */
+  noun?: string;
   items: readonly BreakdownItem[];
   totalCents: number;
   currency: string;
@@ -26,8 +29,8 @@ export default function BreakdownPie({
   const { singular, plural, legendTestId } = BREAKDOWN[kind];
   const top = items[0];
   const summary = top
-    ? `Spending by ${singular}: ${items.length} ${items.length === 1 ? singular : plural}, largest ${top.name} at ${sharePercent(top.cents, totalCents)}%`
-    : `Spending by ${singular}`;
+    ? `${noun} by ${singular}: ${items.length} ${items.length === 1 ? singular : plural}, largest ${top.name} at ${sharePercent(top.cents, totalCents)}%`
+    : `${noun} by ${singular}`;
 
   return (
     <div className="flex flex-col items-center gap-4">

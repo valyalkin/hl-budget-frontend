@@ -5,8 +5,10 @@ import { ids, spendings, TODAY } from '@/mocks/fixtures';
 import {
   createAccount,
   createCategory,
+  createIncomeCategory,
   deleteAccount,
   deleteCategory,
+  deleteIncomeCategory,
   deleteSpending,
   type ImportInput,
   importSpendings,
@@ -606,6 +608,210 @@ describe('importSpendings', () => {
     );
     await expect(importSpendings(importInput())).resolves.toEqual({
       status: 'signed-out',
+    });
+  });
+});
+describe('income actions (specs/009)', () => {
+  const problem = (status: number, body: object) =>
+    HttpResponse.json(
+      { status, ...body },
+      { status, headers: { 'Content-Type': 'application/problem+json' } },
+    );
+  const savedIncome = (date: string) => ({
+    id: ids.spending1,
+    date,
+    source: 'Acme Corp',
+    amount: { amount: '6.75', currency: 'CAD' },
+    category: { id: ids.coffee, name: 'Salary' },
+    account: { id: ids.visa, name: 'Visa' },
+    createdAt: '2026-10-15T00:00:00Z',
+    updatedAt: '2026-10-15T00:00:00Z',
+  });
+  const incomeInput = (
+    overrides: Partial<SpendingInput> = {},
+  ): SpendingInput => ({
+    ...input({
+      merchant: ' Acme Corp ',
+      category: { id: ids.coffee },
+      categoryText: 'Salary',
+    }),
+    ledger: 'income',
+    ...overrides,
+  });
+
+  it('adds an income with one POST to /incomes, the source from the merchant field', async () => {
+    const seen = record('post', '/incomes', () =>
+      HttpResponse.json(savedIncome('2026-10-15'), { status: 201 }),
+    );
+
+    const result = await saveSpending(incomeInput());
+
+    expect(result).toEqual({ status: 'ok', month: '2026-10' });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.key).toBe(KEY);
+    expect(seen[0]?.body).toMatchObject({ source: 'Acme Corp' });
+    expect(seen[0]?.body).not.toHaveProperty('merchant');
+  });
+
+  it('edits an income with PUT /incomes/{id}', async () => {
+    const seen = record('put', `/incomes/${ids.spending1}`, () =>
+      HttpResponse.json(savedIncome('2026-09-15')),
+    );
+
+    const result = await saveSpending(
+      incomeInput({ mode: 'edit', spendingId: ids.spending1 }),
+    );
+
+    expect(result).toEqual({ status: 'ok', month: '2026-09' });
+    expect(seen[0]?.method).toBe('PUT');
+  });
+
+  it('words an unknown income category and a missing source for income', async () => {
+    server.use(
+      http.post(`${API}/incomes`, () =>
+        problem(422, {
+          errors: [
+            {
+              pointer: '#/categoryName',
+              field: 'categoryName',
+              code: 'NotFound',
+              message: 'is not one of your income categories',
+            },
+          ],
+        }),
+      ),
+    );
+    await expect(
+      saveSpending(
+        incomeInput({
+          category: { name: 'Groceries' },
+          categoryText: 'Groceries',
+        }),
+      ),
+    ).resolves.toMatchObject({
+      status: 'error',
+      message: 'Not one of your income categories',
+      field: 'category',
+    });
+    await expect(saveSpending(incomeInput({ merchant: ' ' }))).resolves.toEqual(
+      { status: 'error', message: 'Add a source.', field: 'merchant' },
+    );
+  });
+
+  it('deletes an income at /incomes/{id}', async () => {
+    const seen = record(
+      'delete',
+      `/incomes/${ids.spending1}`,
+      () => new HttpResponse(null, { status: 204 }),
+    );
+    await expect(deleteSpending(ids.spending1, 'income')).resolves.toEqual({
+      status: 'ok',
+    });
+    expect(seen).toHaveLength(1);
+  });
+
+  it('creates and deletes income categories at /income-categories', async () => {
+    const created = record('post', '/income-categories', () =>
+      HttpResponse.json({}, { status: 201 }),
+    );
+    await expect(createIncomeCategory(' Freelance ')).resolves.toEqual({
+      status: 'ok',
+    });
+    expect(created[0]?.body).toEqual({ name: 'Freelance' });
+
+    server.use(
+      http.delete(`${API}/income-categories/${ids.gifts}`, () =>
+        problem(409, { details: { reason: 'in-use', incomeCount: 1 } }),
+      ),
+    );
+    await expect(
+      deleteIncomeCategory({ id: ids.gifts, name: 'Freelance' }),
+    ).resolves.toMatchObject({
+      status: 'error',
+      message: 'Freelance is used by 1 entry, so it can’t be removed.',
+    });
+  });
+
+  it('imports income rows to /income-imports, mapping row errors at #/incomes/…', async () => {
+    const seen = record('post', '/income-imports', () =>
+      HttpResponse.json(
+        {
+          id: '9b2f6e1a-4c3d-4e5f-8a7b-0c1d2e3f4a5b',
+          incomeCount: 1,
+          firstDate: '2026-10-15',
+          lastDate: '2026-10-15',
+          total: { amount: '5000.00', currency: 'CAD' },
+          createdAt: '2026-10-28T14:03:11Z',
+        },
+        { status: 201 },
+      ),
+    );
+    const base: ImportInput = {
+      ledger: 'income',
+      rows: [
+        {
+          key: 'r1',
+          draft: {
+            date: '2026-10-15',
+            merchant: ' Acme Corp ',
+            category: 'Salary',
+            account: 'Visa',
+            amount: '5000',
+          },
+        },
+      ],
+      idempotencyKey: KEY,
+      today: TODAY,
+      currency: 'CAD',
+      lookups: {
+        categories: [{ name: 'Salary' }],
+        accounts: [{ name: 'Visa' }],
+      },
+    };
+
+    await expect(importSpendings(base)).resolves.toEqual({
+      status: 'ok',
+      month: '2026-10',
+      count: 1,
+    });
+    expect(seen[0]?.body).toEqual({
+      incomes: [
+        {
+          date: '2026-10-15',
+          source: 'Acme Corp',
+          amount: { amount: '5000.00', currency: 'CAD' },
+          categoryName: 'Salary',
+          accountName: 'Visa',
+        },
+      ],
+    });
+
+    server.use(
+      http.post(`${API}/income-imports`, () =>
+        problem(422, {
+          errors: [
+            {
+              pointer: '#/incomes/0/categoryName',
+              field: 'incomes[0].categoryName',
+              code: 'NotFound',
+              message: 'is not one of your income categories',
+            },
+          ],
+        }),
+      ),
+    );
+    await expect(
+      importSpendings({ ...base, idempotencyKey: crypto.randomUUID() }),
+    ).resolves.toEqual({
+      status: 'error',
+      message: '1 row needs attention',
+      rowErrors: [
+        {
+          row: 0,
+          field: 'category',
+          message: 'Not one of your income categories',
+        },
+      ],
     });
   });
 });
