@@ -48,6 +48,13 @@ export function phoneData(overrides: Partial<PhoneData> = {}): PhoneData {
         },
       ],
     },
+    accountTotals: {
+      totalCents: 223437,
+      items: [
+        { id: ids.visa, name: 'Visa', cents: 215000, color: '#e11d48' },
+        { id: ids.cash, name: 'Cash', cents: 8437, color: '#0891b2' },
+      ],
+    },
     categories,
     accounts,
     merchants,

@@ -32,8 +32,10 @@ export type ImportSession = {
 
 export type PhoneUi = {
   layers: readonly Layer[];
-  view: 'spendings' | 'by-category';
+  view: 'spendings' | 'by-category' | 'by-account';
   chart: 'table' | 'pie';
+  /** By account's own Table / Pie choice (specs/008 FR-002). */
+  accountChart: 'table' | 'pie';
   notice: string;
   importSession: ImportSession | null;
   /** Opens a layer on top, with its own history entry. */
@@ -46,6 +48,7 @@ export type PhoneUi = {
   reset: () => void;
   setView: (view: PhoneUi['view']) => void;
   setChart: (chart: PhoneUi['chart']) => void;
+  setAccountChart: (chart: PhoneUi['accountChart']) => void;
   notify: (text: string) => void;
   clearNotice: () => void;
   setImportSession: (session: ImportSession | null) => void;
@@ -70,6 +73,8 @@ export default function PhoneUiProvider({ children }: { children: ReactNode }) {
   const layersRef = useRef<readonly Layer[]>([]);
   const [view, setViewState] = useState<PhoneUi['view']>('spendings');
   const [chart, setChartState] = useState<PhoneUi['chart']>('table');
+  const [accountChart, setAccountChartState] =
+    useState<PhoneUi['accountChart']>('table');
   const [notice, setNotice] = useState('');
   const [importSession, setImportSession] = useState<ImportSession | null>(
     null,
@@ -124,6 +129,7 @@ export default function PhoneUiProvider({ children }: { children: ReactNode }) {
     layers,
     view,
     chart,
+    accountChart,
     notice,
     importSession,
     open: (layer) => {
@@ -158,6 +164,10 @@ export default function PhoneUiProvider({ children }: { children: ReactNode }) {
     setChart: (next) => {
       setNotice('');
       setChartState(next);
+    },
+    setAccountChart: (next) => {
+      setNotice('');
+      setAccountChartState(next);
     },
     notify: setNotice,
     clearNotice: () => setNotice(''),

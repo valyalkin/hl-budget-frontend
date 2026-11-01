@@ -9,7 +9,7 @@ import {
   importRowDisplay,
   monthOptions,
   PHONE_FIELDS,
-  topCategories,
+  topSlices,
   yearOptions,
 } from '@/app/lib/phone';
 
@@ -118,7 +118,7 @@ describe('firstPhoneProblem', () => {
   });
 });
 
-describe('topCategories', () => {
+describe('topSlices', () => {
   const items = [
     ['a', 800],
     ['b', 700],
@@ -136,7 +136,7 @@ describe('topCategories', () => {
   }));
 
   it('keeps the 6 largest and sums the rest as Everything else', () => {
-    const slices = topCategories(items, 3600);
+    const slices = topSlices(items, 3600);
     expect(slices.map((s) => s.name)).toEqual([
       'a',
       'b',
@@ -157,13 +157,13 @@ describe('topCategories', () => {
   });
 
   it('has no Everything else with 6 or fewer categories', () => {
-    expect(
-      topCategories(items.slice(0, 6), 3300).map((s) => s.name),
-    ).not.toContain(EVERYTHING_ELSE);
+    expect(topSlices(items.slice(0, 6), 3300).map((s) => s.name)).not.toContain(
+      EVERYTHING_ELSE,
+    );
   });
 
   it('ranks by amount whatever order the items come in', () => {
-    const slices = topCategories([...items].reverse(), 3600);
+    const slices = topSlices([...items].reverse(), 3600);
     expect(slices[0]?.name).toBe('a');
   });
 });

@@ -1,7 +1,7 @@
 import { loadSpendingsPage } from '@/app/lib/data';
 import { monthLabel, toCents } from '@/app/lib/utils';
 import ImportCsvButton from '@/app/ui/import/import-csv-button';
-import ByCategoryCard from '@/app/ui/spendings/by-category-card';
+import BreakdownCard from '@/app/ui/spendings/breakdown-card';
 import MonthLine from '@/app/ui/spendings/month-line';
 import MonthTotalCard from '@/app/ui/spendings/month-total-card';
 import SpendingsTable from '@/app/ui/spendings/spendings-table';
@@ -68,13 +68,26 @@ export default async function MonthSection({
             total={monthTotal?.total ?? { amount: '0.00', currency }}
             count={monthTotal?.spendingCount ?? 0}
           />
-          <ByCategoryCard
+          <BreakdownCard
+            kind="category"
             label={label}
             currency={currency}
             totalCents={toCents(data.categoryTotals.total.amount)}
             items={data.categoryTotals.items.map((item) => ({
               id: item.category.id,
               name: item.category.name,
+              cents: toCents(item.total.amount),
+              color: item.color,
+            }))}
+          />
+          <BreakdownCard
+            kind="account"
+            label={label}
+            currency={currency}
+            totalCents={toCents(data.accountTotals.total.amount)}
+            items={data.accountTotals.items.map((item) => ({
+              id: item.account.id,
+              name: item.account.name,
               cents: toCents(item.total.amount),
               color: item.color,
             }))}

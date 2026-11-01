@@ -4,7 +4,7 @@ import { Fragment, useEffect } from 'react';
 import type { Draft } from '@/app/lib/draft';
 import { defaultDateFor, monthLabel } from '@/app/lib/utils';
 import AccountMenu from '@/app/ui/phone/account-menu';
-import CategoryBreakdown from '@/app/ui/phone/category-breakdown';
+import Breakdown from '@/app/ui/phone/breakdown';
 import DeleteSheet from '@/app/ui/phone/delete-sheet';
 import MonthYearPicker from '@/app/ui/phone/month-year-picker';
 import type { PhoneData } from '@/app/ui/phone/phone-data';
@@ -155,12 +155,25 @@ export default function PhoneApp({ data }: { data: PhoneData }) {
         ) : null}
         {ui.view === 'spendings' ? (
           <SpendingList spendings={data.spendings} label={label} />
-        ) : (
-          <CategoryBreakdown
+        ) : ui.view === 'by-category' ? (
+          <Breakdown
+            kind="category"
+            value={ui.chart}
+            onChange={ui.setChart}
             label={label}
             currency={data.currency}
             totalCents={data.categoryTotals.totalCents}
             items={data.categoryTotals.items}
+          />
+        ) : (
+          <Breakdown
+            kind="account"
+            value={ui.accountChart}
+            onChange={ui.setAccountChart}
+            label={label}
+            currency={data.currency}
+            totalCents={data.accountTotals.totalCents}
+            items={data.accountTotals.items}
           />
         )}
       </main>

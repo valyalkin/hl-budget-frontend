@@ -19,7 +19,7 @@ const selectClass =
 
 /**
  * Month and Year as native dropdowns (FR-011 – FR-014), the month's total and count (FR-016), and
- * the Spendings | By category switch (FR-017). A change navigates to `?month=`, the same URL the
+ * the Spendings | By category | By account switch (FR-017, specs/008 FR-015). A change navigates to `?month=`, the same URL the
  * desktop month line uses (research R-003).
  */
 export default function MonthYearPicker({
@@ -114,6 +114,7 @@ export default function MonthYearPicker({
         options={[
           { value: 'spendings', label: 'Spendings' },
           { value: 'by-category', label: 'By category' },
+          { value: 'by-account', label: 'By account' },
         ]}
       />
     </section>

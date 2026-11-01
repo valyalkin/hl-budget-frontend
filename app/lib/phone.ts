@@ -87,13 +87,13 @@ export function firstPhoneProblem(
 }
 
 // ---------------------------------------------------------------------------------------------
-// By category: top 6 plus "Everything else" (FR-032)
+// By category and By account: top 6 plus "Everything else" (FR-032, specs/008)
 
 export const EVERYTHING_ELSE = 'Everything else';
 /** "Everything else" is a neutral grey outside the category palette (specs/007 research R-001). */
 export const REST_COLOR = '#8a908b';
 
-export type CategorySlice = {
+export type Slice = {
   key: string;
   name: string;
   cents: number;
@@ -101,12 +101,12 @@ export type CategorySlice = {
   color: string;
 };
 
-/** The `limit` largest categories, and the rest summed as "Everything else" when there are more. */
-export function topCategories(
+/** The `limit` largest items, and the rest summed as "Everything else" when there are more. */
+export function topSlices(
   items: readonly { id: string; name: string; cents: number; color: string }[],
   totalCents: number,
   limit = 6,
-): CategorySlice[] {
+): Slice[] {
   const ranked = [...items].sort((a, b) => b.cents - a.cents);
   const top = ranked.slice(0, limit).map((item) => ({
     key: item.id,

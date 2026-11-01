@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw';
 import {
   accountList,
+  accountTotals,
   categoryList,
   categoryTotals,
   merchantList,
@@ -19,6 +20,7 @@ export const handlers: RequestHandler[] = [
   }),
   http.get(`${API}/spendings`, () => HttpResponse.json(spendingPage())),
   http.get(`${API}/category-totals`, () => HttpResponse.json(categoryTotals)),
+  http.get(`${API}/account-totals`, () => HttpResponse.json(accountTotals)),
   http.get(`${API}/categories`, () => HttpResponse.json(categoryList)),
   http.get(`${API}/accounts`, () => HttpResponse.json(accountList)),
   http.get(`${API}/merchants`, () => HttpResponse.json(merchantList)),

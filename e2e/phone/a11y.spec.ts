@@ -15,6 +15,12 @@ test('SC-006: every phone screen and sheet', async ({ page }) => {
   await expectAccessible(page, 'by category table');
   await page.getByRole('button', { name: 'Pie' }).click();
   await expectAccessible(page, 'by category pie');
+  // specs/008: By account in both views.
+  await page.getByRole('button', { name: 'By account' }).click();
+  await expectAccessible(page, 'by account table');
+  await page.getByRole('button', { name: 'Pie' }).click();
+  await expectAccessible(page, 'by account pie');
+  await page.getByRole('button', { name: 'Table' }).click();
   await page.getByRole('button', { name: 'Spendings' }).click();
 
   await page.getByRole('button', { name: 'Account menu' }).click();

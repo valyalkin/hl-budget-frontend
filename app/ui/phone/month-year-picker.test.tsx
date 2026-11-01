@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import MonthYearPicker from '@/app/ui/phone/month-year-picker';
@@ -79,6 +79,22 @@ describe('MonthYearPicker', () => {
     );
     await userEvent.click(byCategory);
     expect(byCategory).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('offers By account as the third option of the switch (specs/008 FR-015)', async () => {
+    renderPicker();
+    const view = screen.getByRole('group', { name: 'View' });
+    expect(
+      within(view)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Spendings', 'By category', 'By account']);
+    const byAccount = within(view).getByRole('button', { name: 'By account' });
+    await userEvent.click(byAccount);
+    expect(byAccount).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      within(view).getByRole('button', { name: 'By category' }),
+    ).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('uses 16px text in both dropdowns (no zoom on iOS)', () => {

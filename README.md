@@ -13,8 +13,9 @@ Feature specs live in the `hl-budget-spec` repository (`specs/001-platform-found
 - `/`: the signed-out screen (header with Sign in). A signed-in visitor is sent to `/spendings`.
 - `/spendings?month=YYYY-MM`: the month line, the spendings table with inline add, edit and
   delete (keyboard entry with autofill for merchant, category and account), the month total and
-  the By category card (table or donut). Each category is drawn in its own colour from the API
-  (no CSS variables), and a hovered, focused or tapped slice names itself in the donut's centre
+  the By category and By account cards (specs/008), each a table or a donut with its own stored
+  choice (`app/ui/spendings/breakdown-*.tsx`, one set of components for both). Each category and
+  account is drawn in its own colour from the API (no CSS variables), and a hovered, focused or tapped slice names itself in the donut's centre
   (`app/ui/charts/donut-chart.tsx`, shared with the phone). Categories and accounts are chosen
   from the user's own; an unknown name is "Not one of your categories / accounts" and is never
   created. The user icon opens Settings, the only place to add categories and accounts. Gated in
@@ -25,7 +26,8 @@ Feature specs live in the `hl-budget-spec` repository (`specs/001-platform-found
   uploaded; dates with the year last are read day first, negative amounts become spendings.
 - **Phones (below 640px wide)**: the same `/spendings` address shows a touch layout instead
   (specs/006-mobile-view): Month and Year dropdowns, the month total, a compact list with a
-  floating Add spending button, By category as a table or a top-6 donut, full-screen New / Edit /
+  floating Add spending button, By category and By account (a three-option switch) as a table or a
+  top-6 donut, full-screen New / Edit /
   Fix row forms, a delete confirmation sheet, an account menu sheet (Settings, Import CSV, Sign
   out) and a two-step import. The code is in `app/ui/phone/` and `app/lib/phone.ts`; it reuses the
   desktop's rules and Server Actions but none of its components. The desktop tree renders exactly
