@@ -128,10 +128,11 @@ describe('topCategories', () => {
     ['f', 300],
     ['g', 200],
     ['h', 100],
-  ].map(([name, cents]) => ({
+  ].map(([name, cents], i) => ({
     id: String(name),
     name: String(name),
     cents: Number(cents),
+    color: `#00000${i}`,
   }));
 
   it('keeps the 6 largest and sums the rest as Everything else', () => {
@@ -148,9 +149,11 @@ describe('topCategories', () => {
     expect(slices[6]).toMatchObject({
       cents: 300,
       share: 8,
-      color: 'var(--color-muted)',
+      color: '#8a908b',
     });
-    expect(slices[0]).toMatchObject({ share: 22, color: 'var(--color-cat-1)' });
+    // Each top slice keeps its category's own colour (specs/007 FR-004).
+    expect(slices[0]).toMatchObject({ share: 22, color: '#000000' });
+    expect(slices[5]).toMatchObject({ color: '#000005' });
   });
 
   it('has no Everything else with 6 or fewer categories', () => {

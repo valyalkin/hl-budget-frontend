@@ -32,6 +32,7 @@ export default async function PhoneSection({
             id: item.category.id,
             name: item.category.name,
             cents: toCents(item.total.amount),
+            color: item.color,
           })),
         },
         categories: data.categories,

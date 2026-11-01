@@ -16,7 +16,7 @@ export type PhoneData = {
   spendings: Spending[];
   categoryTotals: {
     totalCents: number;
-    items: { id: string; name: string; cents: number }[];
+    items: { id: string; name: string; cents: number; color: string }[];
   };
   categories: (NamedItem & { isDefault: boolean })[];
   accounts: NamedItem[];

@@ -2,11 +2,12 @@
 
 import { nothingToBreakDown } from '@/app/lib/messages';
 import { topCategories } from '@/app/lib/phone';
-import { donutArcs, formatCents, sharePercent } from '@/app/lib/utils';
+import { formatCents, sharePercent } from '@/app/lib/utils';
+import DonutChart from '@/app/ui/charts/donut-chart';
 import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
 import Segmented from '@/app/ui/phone/segmented';
 
-type Item = { id: string; name: string; cents: number };
+type Item = { id: string; name: string; cents: number; color: string };
 
 /**
  * By category (FR-030 – FR-034): Table lists every category with its share and a total row; Pie
@@ -70,7 +71,17 @@ export default function CategoryBreakdown({
               .sort((a, b) => b.cents - a.cents)
               .map((item) => (
                 <tr key={item.id} className="h-12">
-                  <td className="truncate px-4">{item.name}</td>
+                  <td className="px-4">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        data-testid="category-swatch"
+                        className="size-3 shrink-0 rounded-sm"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="truncate">{item.name}</span>
+                    </span>
+                  </td>
                   <td className="px-2 text-right font-mono tabular-nums">
                     {money(item.cents)}
                   </td>
@@ -114,36 +125,23 @@ function Pie({
   items: readonly Item[];
 }) {
   const slices = topCategories(items, totalCents);
-  const arcs = donutArcs(slices, { r: 92, inner: 60 });
   return (
     <div className="flex flex-col items-center gap-5 rounded-2xl bg-surface p-4 ring-1 ring-line">
-      <div className="relative size-52">
-        <svg
-          viewBox="0 0 200 200"
-          className="size-full"
-          role="img"
-          aria-label={`Donut chart of ${label} spending by category. Values are listed below.`}
-        >
-          {arcs.map((arc, index) => (
-            <path
-              key={slices[index]?.key ?? index}
-              d={arc.path}
-              fill={slices[index]?.color}
-              stroke="#FFFFFF"
-              strokeWidth="2"
-            />
-          ))}
-        </svg>
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 flex flex-col items-center justify-center"
-        >
-          <span className="text-xs text-muted">Total</span>
-          <span className="font-mono text-base font-medium tabular-nums">
-            {money(totalCents)}
-          </span>
-        </div>
-      </div>
+      <DonutChart
+        summary={`Donut chart of ${label} spending by category. Values are listed below.`}
+        totalText={money(totalCents)}
+        radius={92}
+        inner={60}
+        className="size-52"
+        slices={slices.map((slice) => ({
+          key: slice.key,
+          label: slice.name,
+          cents: slice.cents,
+          amountText: money(slice.cents),
+          shareText: `${slice.share}%`,
+          color: slice.color,
+        }))}
+      />
       <ul className="w-full divide-y divide-line-soft">
         {slices.map((slice) => (
           <li

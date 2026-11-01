@@ -76,6 +76,7 @@ export default async function MonthSection({
               id: item.category.id,
               name: item.category.name,
               cents: toCents(item.total.amount),
+              color: item.color,
             }))}
           />
         </aside>
