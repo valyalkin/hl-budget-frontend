@@ -6,6 +6,7 @@ import { cache } from 'react';
 import { authedFetch } from '@/app/lib/api';
 import {
   type AccountList,
+  type AccountTotals,
   type CategoryList,
   type CategoryTotals,
   type MerchantList,
@@ -83,6 +84,12 @@ export async function getCategoryTotals(
   return read<CategoryTotals>(`/api/v1/category-totals?from=${from}&to=${to}`);
 }
 
+/** Spending per account for a month: only accounts with spending, largest first (specs/008). */
+export async function getAccountTotals(ym: YearMonth): Promise<AccountTotals> {
+  const { from, to } = monthBounds(ym);
+  return read<AccountTotals>(`/api/v1/account-totals?from=${from}&to=${to}`);
+}
+
 /**
  * The caller's categories, defaults included, with use counts. React's `cache` shares one call
  * between the Spendings section and Settings within a single render; nothing is kept after it.
@@ -120,6 +127,7 @@ export type SpendingsPageData = {
   totals: MonthlyTotals;
   spendings: Spending[];
   categoryTotals: CategoryTotals;
+  accountTotals: AccountTotals;
   categories: (NamedItem & { isDefault: boolean })[];
   accounts: NamedItem[];
   merchants: MerchantList;
@@ -141,21 +149,30 @@ export const loadSpendingsPage = cache(async function loadSpendingsPage(
   ]);
   const today = firstTotals.today;
   const ym = parseMonthParam(monthParam, today);
-  const [totals, spendings, categoryTotals, categories, accounts, merchants] =
-    await Promise.all([
-      ym.year === firstTotals.year ? firstTotals : getMonthlyTotals(ym.year),
-      getMonthSpendings(ym),
-      getCategoryTotals(ym),
-      getCategories(),
-      getAccounts(),
-      getMerchants(),
-    ]);
+  const [
+    totals,
+    spendings,
+    categoryTotals,
+    accountTotals,
+    categories,
+    accounts,
+    merchants,
+  ] = await Promise.all([
+    ym.year === firstTotals.year ? firstTotals : getMonthlyTotals(ym.year),
+    getMonthSpendings(ym),
+    getCategoryTotals(ym),
+    getAccountTotals(ym),
+    getCategories(),
+    getAccounts(),
+    getMerchants(),
+  ]);
   return {
     ym,
     today,
     totals,
     spendings,
     categoryTotals,
+    accountTotals,
     categories,
     accounts,
     merchants,

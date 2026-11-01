@@ -1,26 +1,33 @@
 import { formatCents, sharePercent } from '@/app/lib/utils';
 import DonutChart from '@/app/ui/charts/donut-chart';
-import type { CategoryItem } from '@/app/ui/spendings/category-table';
+import {
+  BREAKDOWN,
+  type BreakdownItem,
+  type BreakdownKind,
+} from '@/app/ui/spendings/breakdown-kind';
 
 /**
- * A donut with one slice for every category with spending, and no "Everything else" (FR-072).
- * Each category is drawn in its own colour (specs/007 FR-004); a slice names itself on hover,
- * focus or tap, and the ordered legend gives every slice's name, amount and share, so nothing
- * depends on colour alone.
+ * A donut with one slice for every category (or account) with spending, and no "Everything else"
+ * (FR-072, specs/008 FR-004). Each item is drawn in its own colour (specs/007 FR-004); a slice
+ * names itself on hover, focus or tap, and the ordered legend gives every slice's name, amount and
+ * share, so nothing depends on colour alone.
  */
-export default function CategoryPie({
+export default function BreakdownPie({
+  kind,
   items,
   totalCents,
   currency,
 }: {
-  items: readonly CategoryItem[];
+  kind: BreakdownKind;
+  items: readonly BreakdownItem[];
   totalCents: number;
   currency: string;
 }) {
+  const { singular, plural, legendTestId } = BREAKDOWN[kind];
   const top = items[0];
   const summary = top
-    ? `Spending by category: ${items.length} ${items.length === 1 ? 'category' : 'categories'}, largest ${top.name} at ${sharePercent(top.cents, totalCents)}%`
-    : 'Spending by category';
+    ? `Spending by ${singular}: ${items.length} ${items.length === 1 ? singular : plural}, largest ${top.name} at ${sharePercent(top.cents, totalCents)}%`
+    : `Spending by ${singular}`;
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -41,7 +48,7 @@ export default function CategoryPie({
           <li key={item.id} className="flex items-center gap-2">
             <span
               aria-hidden="true"
-              data-testid="legend-swatch"
+              data-testid={legendTestId}
               className="size-3 shrink-0 rounded-sm"
               style={{ backgroundColor: item.color }}
             />

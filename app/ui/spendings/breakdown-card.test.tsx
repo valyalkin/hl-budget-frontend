@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import ByCategoryCard from '@/app/ui/spendings/by-category-card';
+import BreakdownCard from '@/app/ui/spendings/breakdown-card';
 
 const items = Array.from({ length: 12 }, (_, i) => ({
   id: `id-${i}`,
@@ -13,7 +13,8 @@ const total = items.reduce((sum, item) => sum + item.cents, 0);
 
 function renderCard(list = items) {
   render(
-    <ByCategoryCard
+    <BreakdownCard
+      kind="category"
       label="October 2026"
       currency="CAD"
       totalCents={total}
@@ -26,7 +27,7 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-describe('ByCategoryCard', () => {
+describe('BreakdownCard, by category', () => {
   it('starts as a table of every category with amount and share, and a total', () => {
     renderCard(items.slice(0, 2));
     expect(screen.getByRole('button', { name: 'Table' })).toHaveAttribute(
@@ -44,7 +45,8 @@ describe('ByCategoryCard', () => {
 
   it('as a pie shows one slice per category with no cap and no “Everything else”', async () => {
     render(
-      <ByCategoryCard
+      <BreakdownCard
+        kind="category"
         label="October 2026"
         currency="CAD"
         totalCents={total}

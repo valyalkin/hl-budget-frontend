@@ -5,12 +5,15 @@ import { UnauthenticatedError } from '@/app/lib/definitions';
 import {
   ensureMyProfile,
   getAccounts,
+  getAccountTotals,
   getCategories,
   getMonthlyTotals,
   getMonthSpendings,
   loadSpendingsPage,
 } from '@/app/lib/data';
 import {
+  accountTotals,
+  categoryTotals,
   ids,
   monthlyTotals,
   spendingPage,
@@ -153,6 +156,54 @@ describe('spending screen reads (feature 003)', () => {
     });
   });
 
+  it('reads account totals for the whole month (specs/008)', async () => {
+    const urls: URL[] = [];
+    server.use(
+      http.get(`${API}/account-totals`, ({ request }) => {
+        urls.push(new globalThis.URL(request.url));
+        return HttpResponse.json({
+          from: '2026-02-01',
+          to: '2026-02-28',
+          total: { amount: '0.00', currency: 'CAD' },
+          spendingCount: 0,
+          items: [],
+        });
+      }),
+    );
+    const totals = await getAccountTotals({ year: 2026, month: 2 });
+    expect(totals.items).toEqual([]);
+    expect(urls[0]?.pathname).toBe('/api/v1/account-totals');
+    expect(urls[0]?.searchParams.get('from')).toBe('2026-02-01');
+    expect(urls[0]?.searchParams.get('to')).toBe('2026-02-28');
+  });
+
+  it('fetches account totals alongside category totals for the same month', async () => {
+    const seen: string[] = [];
+    let categoryDone = false;
+    let accountStartedBeforeCategoryDone = false;
+    server.use(
+      http.put(URL, () => HttpResponse.json(profile)),
+      http.get(`${API}/category-totals`, async ({ request }) => {
+        seen.push(new globalThis.URL(request.url).search);
+        await delay(30);
+        categoryDone = true;
+        return HttpResponse.json(categoryTotals);
+      }),
+      http.get(`${API}/account-totals`, ({ request }) => {
+        seen.push(new globalThis.URL(request.url).search);
+        accountStartedBeforeCategoryDone = !categoryDone;
+        return HttpResponse.json(accountTotals);
+      }),
+    );
+    const data = await loadSpendingsPage('2026-09');
+    expect(seen).toEqual([
+      '?from=2026-09-01&to=2026-09-30',
+      '?from=2026-09-01&to=2026-09-30',
+    ]);
+    expect(accountStartedBeforeCategoryDone).toBe(true);
+    expect(data.accountTotals.total.amount).toBe('2234.37');
+  });
+
   it('loads a past month with one totals call', async () => {
     let totalsCalls = 0;
     server.use(
@@ -173,6 +224,10 @@ describe('spending screen reads (feature 003)', () => {
     expect(data.ym).toEqual({ year: 2026, month: 9 });
     expect(data.today).toBe(TODAY);
     expect(data.categoryTotals.items).toHaveLength(2);
+    expect(data.accountTotals.items.map((i) => i.account.name)).toEqual([
+      'Visa',
+      'Cash',
+    ]);
     expect(data.merchants.items[0]?.name).toBe('Neighbourhood Market');
   });
 

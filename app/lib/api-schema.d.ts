@@ -297,6 +297,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/account-totals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's spending per account over a date range
+         * @description One entry per account with at least one spending in the range, and only those; largest total first, ties by account name. Not paged: bounded by the caller's account count.
+         */
+        get: operations["listAccountTotals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -500,6 +520,11 @@ export interface components {
              * @description How many of the caller's spendings use this account
              */
             readonly spendingCount: number;
+            /**
+             * @description The account's colour, assigned when it is created and kept for its lifetime (including renames). Drawn in the By account table and donut
+             * @example #e11d48
+             */
+            readonly color: string;
         };
         /** @description The rows to import, in the order the user reviewed them */
         SpendingImportRequest: {
@@ -683,6 +708,41 @@ export interface components {
         /** @description All of the caller's accounts, sorted by name (never paged) */
         AccountList: {
             items: components["schemas"]["Account"][];
+        };
+        /** @description One account's spending in the range */
+        AccountTotal: {
+            account: components["schemas"]["Ref"];
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @example 2
+             */
+            spendingCount: number;
+            /**
+             * @description The account's colour, the same as Account.color
+             * @example #e11d48
+             */
+            color: string;
+        };
+        /** @description Spending per account over a date range: only accounts with spending, largest first */
+        AccountTotals: {
+            /**
+             * Format: date
+             * @example 2026-10-01
+             */
+            from: string;
+            /**
+             * Format: date
+             * @example 2026-10-31
+             */
+            to: string;
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @example 14
+             */
+            spendingCount: number;
+            items: components["schemas"]["AccountTotal"][];
         };
     };
     responses: {
@@ -1603,6 +1663,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CategoryTotals"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listAccountTotals: {
+        parameters: {
+            query: {
+                /**
+                 * @description Earliest date, inclusive
+                 * @example 2026-10-01
+                 */
+                from: string;
+                /**
+                 * @description Latest date, inclusive; not before `from`, at most 366 days after it
+                 * @example 2026-10-31
+                 */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Totals per account; `items` is empty when nothing was spent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountTotals"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

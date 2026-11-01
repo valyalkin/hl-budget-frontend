@@ -1,6 +1,7 @@
 import type {
   SpendingImport,
   AccountList,
+  AccountTotals,
   CategoryList,
   CategoryTotals,
   MerchantList,
@@ -92,6 +93,27 @@ export const categoryTotals: CategoryTotals = {
   ],
 };
 
+export const accountTotals: AccountTotals = {
+  from: '2026-10-01',
+  to: '2026-10-31',
+  total: cad('2234.37'),
+  spendingCount: 2,
+  items: [
+    {
+      account: { id: ids.visa, name: 'Visa' },
+      total: cad('2150.00'),
+      spendingCount: 1,
+      color: '#e11d48',
+    },
+    {
+      account: { id: ids.cash, name: 'Cash' },
+      total: cad('84.37'),
+      spendingCount: 1,
+      color: '#0891b2',
+    },
+  ],
+};
+
 export const categoryList: CategoryList = {
   items: [
     {
@@ -127,8 +149,8 @@ export const categoryList: CategoryList = {
 
 export const accountList: AccountList = {
   items: [
-    { id: ids.visa, name: 'Visa', spendingCount: 12 },
-    { id: ids.cash, name: 'Cash', spendingCount: 0 },
+    { id: ids.visa, name: 'Visa', spendingCount: 12, color: '#e11d48' },
+    { id: ids.cash, name: 'Cash', spendingCount: 0, color: '#0891b2' },
   ],
 };
 

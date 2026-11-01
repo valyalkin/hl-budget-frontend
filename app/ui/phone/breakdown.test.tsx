@@ -1,7 +1,8 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
-import CategoryBreakdown from '@/app/ui/phone/category-breakdown';
+import Breakdown, { type ChartView } from '@/app/ui/phone/breakdown';
 import { renderPhone } from '@/app/ui/phone/test-support';
 
 const items = [
@@ -19,20 +20,33 @@ const items = [
   cents: (8 - i) * 1000,
   color: `#10203${i}`,
 }));
-const total = items.reduce((sum, item) => sum + item.cents, 0);
 
-function setup(list = items) {
-  renderPhone(
-    <CategoryBreakdown
+function Harness({
+  kind,
+  list,
+}: {
+  kind: 'category' | 'account';
+  list: typeof items;
+}) {
+  const [view, setView] = useState<ChartView>('table');
+  return (
+    <Breakdown
+      kind={kind}
+      value={view}
+      onChange={setView}
       label="October 2026"
       currency="CAD"
-      totalCents={total}
+      totalCents={list.reduce((sum, item) => sum + item.cents, 0)}
       items={list}
-    />,
+    />
   );
 }
 
-describe('CategoryBreakdown', () => {
+function setup(list = items, kind: 'category' | 'account' = 'category') {
+  renderPhone(<Harness kind={kind} list={list} />);
+}
+
+describe('Breakdown, by category', () => {
   it('Table lists every category with its share, and a total row', () => {
     setup();
     const table = screen.getByRole('table', { name: 'Spending by category' });

@@ -1,29 +1,32 @@
 import { formatCents, sharePercent } from '@/app/lib/utils';
+import {
+  BREAKDOWN,
+  type BreakdownItem,
+  type BreakdownKind,
+} from '@/app/ui/spendings/breakdown-kind';
 
-export type CategoryItem = {
-  id: string;
-  name: string;
-  cents: number;
-  /** The category's own colour, `#rrggbb` (specs/007 FR-004). */
-  color: string;
-};
-
-/** Each category with spending this month, its amount and share, largest first, then a total (FR-071). */
-export default function CategoryTable({
+/**
+ * Each category (or account) with spending this month, its amount and share, largest first, then
+ * a total (FR-071, specs/008 FR-003).
+ */
+export default function BreakdownTable({
+  kind,
   items,
   totalCents,
   currency,
 }: {
-  items: readonly CategoryItem[];
+  kind: BreakdownKind;
+  items: readonly BreakdownItem[];
   totalCents: number;
   currency: string;
 }) {
+  const { column, swatchTestId } = BREAKDOWN[kind];
   return (
     <table className="w-full text-sm">
       <thead>
         <tr className="text-left text-xs font-semibold tracking-wide text-muted uppercase">
           <th scope="col" className="py-2">
-            Category
+            {column}
           </th>
           <th scope="col" className="py-2 text-right">
             Amount
@@ -40,7 +43,7 @@ export default function CategoryTable({
               <span className="flex min-w-0 items-center gap-2">
                 <span
                   aria-hidden="true"
-                  data-testid="category-swatch"
+                  data-testid={swatchTestId}
                   className="size-3 shrink-0 rounded-sm"
                   style={{ backgroundColor: item.color }}
                 />

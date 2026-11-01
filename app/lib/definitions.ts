@@ -80,6 +80,8 @@ export type MonthlyTotals = Schemas['MonthlyTotals'];
 export type MonthTotal = Schemas['MonthTotal'];
 export type CategoryTotals = Schemas['CategoryTotals'];
 export type CategoryTotal = Schemas['CategoryTotal'];
+export type AccountTotals = Schemas['AccountTotals'];
+export type AccountTotal = Schemas['AccountTotal'];
 export type Merchant = Schemas['Merchant'];
 export type MerchantList = Schemas['MerchantList'];
 
