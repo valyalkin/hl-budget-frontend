@@ -118,6 +118,8 @@ test.describe('US2: fix and complete rows before adding', () => {
     await expect(page.getByRole('status')).toHaveText(
       'Added 4 spendings from gaps.csv',
     );
+    // The checked rows are dated yesterday, which is last month on the 1st.
+    await page.goto(`/spendings?month=${monthOfDaysAgo(1)}`);
     const table = page.getByRole('table').first();
     await expect(
       table.getByRole('row').filter({ hasText: `${mark} No category` }),
