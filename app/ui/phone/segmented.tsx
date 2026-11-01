@@ -2,7 +2,11 @@
 
 import clsx from 'clsx';
 
-/** A two-or-more option switch of pressed buttons (Spendings | By category, Table | Pie, tabs). */
+/**
+ * A two-or-more option switch of pressed buttons (Spendings | By category | By account, Table | Pie,
+ * tabs). With three or more options the padding narrows and a label may wrap to two lines, so the
+ * switch fits a 320px screen without scrolling sideways (specs/008 research R-008).
+ */
 export default function Segmented<T extends string>({
   label,
   options,
@@ -29,7 +33,8 @@ export default function Segmented<T extends string>({
             aria-pressed={pressed}
             onClick={() => onChange(option.value)}
             className={clsx(
-              'min-h-11 rounded-lg px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand',
+              'min-h-11 rounded-lg text-sm leading-tight font-semibold focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand',
+              options.length >= 3 ? 'px-2' : 'px-3',
               pressed ? 'bg-surface text-ink shadow-sm' : 'text-ink-2',
             )}
           >

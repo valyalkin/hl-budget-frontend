@@ -218,3 +218,37 @@ export async function openFromMenu(
     }),
   ).toBeVisible();
 }
+
+/** Adds accounts in phone Settings, the only place they are created (specs/007 FR-020). */
+export async function addAccountsPhone(page: Page, names: readonly string[]) {
+  await openFromMenu(page, 'Settings');
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  await settings.getByRole('button', { name: 'Accounts' }).click();
+  for (const name of names) {
+    await settings.getByRole('textbox', { name: 'New account' }).fill(name);
+    await settings.getByRole('button', { name: 'Add account' }).click();
+    await expect(
+      settings.getByRole('button', { name: `Remove ${name}` }),
+    ).toBeVisible();
+  }
+  await settings.getByRole('button', { name: 'Close settings' }).click();
+  await expect(settings).toBeHidden();
+}
+
+/** Removes every unused account whose name starts with `prefix`, in phone Settings. */
+export async function removeAccountsPhone(page: Page, prefix: string) {
+  await expectPhoneLayout(page);
+  await openFromMenu(page, 'Settings');
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  await settings.getByRole('button', { name: 'Accounts' }).click();
+  const remove = settings.getByRole('button', {
+    name: new RegExp(`^Remove ${escape(prefix)}`),
+  });
+  while ((await remove.count()) > 0) {
+    const before = await remove.count();
+    await remove.first().click();
+    await expect(remove).toHaveCount(before - 1);
+  }
+  await settings.getByRole('button', { name: 'Close settings' }).click();
+  await expect(settings).toBeHidden();
+}

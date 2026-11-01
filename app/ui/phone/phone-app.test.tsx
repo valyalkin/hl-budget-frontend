@@ -37,6 +37,22 @@ describe('PhoneApp', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows By account with its own Table / Pie choice (specs/008)', async () => {
+    renderPhone(<PhoneApp data={phoneData()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'By account' }));
+    const table = screen.getByRole('table', { name: 'Spending by account' });
+    expect(table).toHaveTextContent('Visa$2,150.00');
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    await userEvent.click(screen.getByRole('button', { name: 'By category' }));
+    expect(
+      screen.getByRole('table', { name: 'Spending by category' }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'By account' }));
+    expect(
+      screen.getByRole('group', { name: /spending by account/ }),
+    ).toBeInTheDocument();
+  });
+
   it('opens a spending prefilled, and deletes it through the sheet', async () => {
     renderPhone(<PhoneApp data={phoneData()} />);
     await userEvent.click(

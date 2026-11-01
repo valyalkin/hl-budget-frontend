@@ -92,3 +92,72 @@ describe('Breakdown, by category', () => {
     ).toBeInTheDocument();
   });
 });
+
+const accountItems = [
+  'Visa',
+  'Amex',
+  'Cash',
+  'Debit',
+  'Wise',
+  'Joint',
+  'Savings',
+  'Bonds',
+].map((name, i) => ({
+  id: name,
+  name,
+  cents: (8 - i) * 1000,
+  color: `#20304${i}`,
+}));
+
+describe('Breakdown, by account (specs/008 US3)', () => {
+  it('Table lists every account highest first with a total row', () => {
+    setup(accountItems, 'account');
+    const table = screen.getByRole('table', { name: 'Spending by account' });
+    expect(
+      within(table).getByRole('columnheader', { name: 'Account' }),
+    ).toBeInTheDocument();
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(1 + 8 + 1);
+    expect(rows[1]).toHaveTextContent('Visa$80.0022%');
+    expect(rows[9]).toHaveTextContent('Total$360.00100%');
+    expect(within(rows[1]!).getByTestId('account-swatch')).toHaveStyle({
+      backgroundColor: '#203040',
+    });
+  });
+
+  it('Pie shows the 6 largest accounts plus Everything else for the other two', async () => {
+    setup(accountItems, 'account');
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    const chart = screen.getByRole('group', {
+      name: 'Donut chart of October 2026 spending by account. Values are listed below.',
+    });
+    const slices = within(chart).getAllByRole('img');
+    expect(slices).toHaveLength(7);
+    expect(slices[0]).toHaveAttribute('fill', '#203040');
+    const legend = screen.getAllByRole('listitem');
+    expect(legend[6]).toHaveTextContent('Everything else$30.008%');
+  });
+
+  it('with 6 or fewer accounts every account has its own slice', async () => {
+    setup(accountItems.slice(0, 6), 'account');
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(6);
+    expect(screen.queryByText('Everything else')).not.toBeInTheDocument();
+  });
+
+  it('a tapped slice names its account in the centre', async () => {
+    setup(accountItems, 'account');
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    await userEvent.click(screen.getByRole('img', { name: /^Amex:/ }));
+    expect(screen.getByTestId('donut-centre')).toHaveTextContent(
+      'Amex$70.00 · 19%',
+    );
+  });
+
+  it('says when there is nothing to break down', () => {
+    setup([], 'account');
+    expect(
+      screen.getByText('Nothing to break down in October 2026.'),
+    ).toBeInTheDocument();
+  });
+});

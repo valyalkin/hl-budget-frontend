@@ -255,4 +255,3 @@ describe('BreakdownCard, by account: colours and slice labels (specs/008 US2)', 
     );
   });
 });
-

@@ -20,7 +20,7 @@ function Probe({ onUi }: { onUi: (next: PhoneUi) => void }) {
   return (
     <p data-testid="state">
       {current.layers.map((layer) => layer.kind).join('>') || 'list'}|
-      {current.view}|{current.chart}|{current.notice}|
+      {current.view}|{current.chart}|{current.accountChart}|{current.notice}|
       {current.importSession ? current.importSession.rows.length : 'none'}
     </p>
   );
@@ -49,7 +49,7 @@ beforeEach(() => {
 describe('PhoneUiProvider', () => {
   it('starts on the list with the Spendings view and the table', () => {
     setup();
-    expect(state()).toBe('list|spendings|table||none');
+    expect(state()).toBe('list|spendings|table|table||none');
   });
 
   it('gives each layer one history entry, and Back closes only the top one', async () => {
@@ -74,7 +74,7 @@ describe('PhoneUiProvider', () => {
     await back(() => ui.close(2, then));
     expect(then).toHaveBeenCalledOnce();
     expect(state()).toBe(
-      'list|spendings|table|Deleted Corner Bakery · $12.40|none',
+      'list|spendings|table|table|Deleted Corner Bakery · $12.40|none',
     );
   });
 
@@ -113,19 +113,30 @@ describe('PhoneUiProvider', () => {
     act(() => ui.open({ kind: 'review' }));
     act(() => ui.open({ kind: 'fix-row', key: 'r1' }));
     await back(() => ui.close());
-    expect(state()).toBe('import>review|spendings|table||1');
+    expect(state()).toBe('import>review|spendings|table|table||1');
     await back(() => window.history.back());
-    expect(state()).toBe('import|spendings|table||none');
+    expect(state()).toBe('import|spendings|table|table||none');
   });
 
   it('clears the notice on the next action', () => {
     setup();
     act(() => ui.notify('Added 3 spendings from oct.csv'));
     act(() => ui.setChart('pie'));
-    expect(state()).toBe('list|spendings|pie||none');
+    expect(state()).toBe('list|spendings|pie|table||none');
     act(() => ui.notify('again'));
     act(() => ui.setView('by-category'));
-    expect(state()).toBe('list|by-category|pie||none');
+    expect(state()).toBe('list|by-category|pie|table||none');
+  });
+
+  it('keeps a Table / Pie choice for By account apart from By category (specs/008)', () => {
+    setup();
+    act(() => ui.setView('by-account'));
+    act(() => ui.setAccountChart('pie'));
+    expect(state()).toBe('list|by-account|table|pie||none');
+    act(() => ui.notify('again'));
+    act(() => ui.setChart('pie'));
+    act(() => ui.setAccountChart('table'));
+    expect(state()).toBe('list|by-account|pie|table||none');
   });
 
   it('forgets a stale layer marker on reload, so the list shows', () => {

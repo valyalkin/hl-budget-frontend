@@ -155,7 +155,7 @@ export default function PhoneApp({ data }: { data: PhoneData }) {
         ) : null}
         {ui.view === 'spendings' ? (
           <SpendingList spendings={data.spendings} label={label} />
-        ) : (
+        ) : ui.view === 'by-category' ? (
           <Breakdown
             kind="category"
             value={ui.chart}
@@ -164,6 +164,16 @@ export default function PhoneApp({ data }: { data: PhoneData }) {
             currency={data.currency}
             totalCents={data.categoryTotals.totalCents}
             items={data.categoryTotals.items}
+          />
+        ) : (
+          <Breakdown
+            kind="account"
+            value={ui.accountChart}
+            onChange={ui.setAccountChart}
+            label={label}
+            currency={data.currency}
+            totalCents={data.accountTotals.totalCents}
+            items={data.accountTotals.items}
           />
         )}
       </main>

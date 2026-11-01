@@ -4,6 +4,7 @@ import type {
   Spending,
 } from '@/app/lib/definitions';
 import type { YearMonth } from '@/app/lib/utils';
+import type { BreakdownItem } from '@/app/ui/spendings/breakdown-kind';
 
 /** Everything the phone screens show for one month, as plain serialisable data. */
 export type PhoneData = {
@@ -16,7 +17,12 @@ export type PhoneData = {
   spendings: Spending[];
   categoryTotals: {
     totalCents: number;
-    items: { id: string; name: string; cents: number; color: string }[];
+    items: BreakdownItem[];
+  };
+  /** Spending per account for the month (specs/008). */
+  accountTotals: {
+    totalCents: number;
+    items: BreakdownItem[];
   };
   categories: (NamedItem & { isDefault: boolean })[];
   accounts: NamedItem[];

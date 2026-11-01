@@ -35,6 +35,15 @@ export default async function PhoneSection({
             color: item.color,
           })),
         },
+        accountTotals: {
+          totalCents: toCents(data.accountTotals.total.amount),
+          items: data.accountTotals.items.map((item) => ({
+            id: item.account.id,
+            name: item.account.name,
+            cents: toCents(item.total.amount),
+            color: item.color,
+          })),
+        },
         categories: data.categories,
         accounts: data.accounts,
         merchants: data.merchants.items.map((m) => ({
