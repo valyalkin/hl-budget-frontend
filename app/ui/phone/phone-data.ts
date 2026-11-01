@@ -1,6 +1,7 @@
 import type {
   MerchantOption,
   NamedItem,
+  SettingsData,
   Spending,
 } from '@/app/lib/definitions';
 import type { YearMonth } from '@/app/lib/utils';
@@ -28,4 +29,6 @@ export type PhoneData = {
   accounts: NamedItem[];
   merchants: MerchantOption[];
   earliestYear: number | null;
+  /** What Settings shows, the same on both pages (specs/009 FR-090). */
+  settings: SettingsData;
 };

@@ -6,6 +6,10 @@ import { authedFetch } from '@/app/lib/api';
 import { getSession } from '@/app/lib/auth';
 import {
   ApiError,
+  type Income,
+  type IncomeImport,
+  type IncomeImportRequest,
+  type IncomeRequest,
   type Spending,
   type SpendingImport,
   type SpendingImportRequest,
@@ -25,6 +29,7 @@ import {
   messageFor,
   needAttention,
 } from '@/app/lib/messages';
+import type { Ledger } from '@/app/lib/ledger';
 import { monthOf, monthParam, parseAmountInput } from '@/app/lib/utils';
 
 /**
@@ -49,7 +54,20 @@ const namedRef = z.union([
   z.object({ name: z.string().trim().min(1).max(50) }),
 ]);
 
+/** Which ledger an entry belongs to (specs/009); the server code alone maps it to an endpoint. */
+const ledgerInput = z.enum(['spendings', 'income']).default('spendings');
+
+/** The API path of each ledger's entries and imports. Never taken from the client. */
+const LEDGER_PATHS = {
+  spendings: {
+    entries: '/api/v1/spendings',
+    imports: '/api/v1/spending-imports',
+  },
+  income: { entries: '/api/v1/incomes', imports: '/api/v1/income-imports' },
+} as const satisfies Record<Ledger, { entries: string; imports: string }>;
+
 const spendingInput = z.object({
+  ledger: ledgerInput,
   mode: z.enum(['add', 'edit']),
   spendingId: z.uuid().optional(),
   idempotencyKey: z.uuid().optional(),
@@ -98,7 +116,8 @@ async function attempt<T extends object>(
 }
 
 /**
- * Adds or edits a spending from the entry row. Add sends the row's Idempotency-Key, so a retried
+ * Adds or edits a spending, or with `ledger: 'income'` an income entry (specs/009), from the entry
+ * row or the phone form. Add sends the row's Idempotency-Key, so a retried
  * or doubled save creates one spending (FR-039). Returns the saved spending's month so the row can
  * switch to it (FR-038).
  */
@@ -123,6 +142,7 @@ export async function saveSpending(
       categories: 'id' in value.category ? [{ name: value.categoryText }] : [],
       accounts: 'id' in value.account ? [{ name: value.accountText }] : [],
     },
+    value.ledger,
   );
   if (problem) {
     return { status: 'error', message: problem.message, field: problem.field };
@@ -131,13 +151,7 @@ export async function saveSpending(
     return { status: 'error', message: MESSAGES.unavailable };
   }
 
-  const body: SpendingRequest = {
-    date: value.date,
-    merchant: value.merchant.trim(),
-    amount: {
-      amount: parseAmountInput(value.amount) ?? '',
-      currency: value.currency,
-    },
+  const references = {
     ...('id' in value.category
       ? { categoryId: value.category.id }
       : { categoryName: value.category.name }),
@@ -145,40 +159,66 @@ export async function saveSpending(
       ? { accountId: value.account.id }
       : { accountName: value.account.name }),
   };
+  const amount = {
+    amount: parseAmountInput(value.amount) ?? '',
+    currency: value.currency,
+  };
+  // An income's source travels in the entry row's merchant field (specs/009 research R-006).
+  const body: SpendingRequest | IncomeRequest =
+    value.ledger === 'income'
+      ? {
+          date: value.date,
+          source: value.merchant.trim(),
+          amount,
+          ...references,
+        }
+      : {
+          date: value.date,
+          merchant: value.merchant.trim(),
+          amount,
+          ...references,
+        };
+  const path = LEDGER_PATHS[value.ledger].entries;
 
-  return attempt(async () => {
-    const saved =
-      value.mode === 'add'
-        ? await authedFetch<Spending>('/api/v1/spendings', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Idempotency-Key': value.idempotencyKey ?? '',
-            },
-            body: JSON.stringify(body),
-          })
-        : await authedFetch<Spending>(
-            `/api/v1/spendings/${value.spendingId ?? ''}`,
-            {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+  return attempt(
+    async () => {
+      const saved =
+        value.mode === 'add'
+          ? await authedFetch<Spending | Income>(path, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Idempotency-Key': value.idempotencyKey ?? '',
+              },
               body: JSON.stringify(body),
-            },
-          );
-    refresh();
-    return { status: 'ok', month: monthParam(monthOf(saved.date)) };
-  });
+            })
+          : await authedFetch<Spending | Income>(
+              `${path}/${value.spendingId ?? ''}`,
+              {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+              },
+            );
+      refresh();
+      return { status: 'ok', month: monthParam(monthOf(saved.date)) };
+    },
+    { ledger: value.ledger },
+  );
 }
 
-/** Deletes a spending at once, with no confirmation and no undo (FR-060). */
+/** Deletes a spending (or an income entry) at once, with no confirmation and no undo (FR-060). */
 export async function deleteSpending(
   spendingId: string,
+  ledger: Ledger = 'spendings',
 ): Promise<ActionResult> {
-  if (!uuid.safeParse(spendingId).success) {
+  const which = ledgerInput.safeParse(ledger);
+  if (!uuid.safeParse(spendingId).success || !which.success) {
     return { status: 'error', message: MESSAGES.unavailable };
   }
+  const path = LEDGER_PATHS[which.data].entries;
   return attempt(async () => {
-    await authedFetch(`/api/v1/spendings/${spendingId}`, { method: 'DELETE' });
+    await authedFetch(`${path}/${spendingId}`, { method: 'DELETE' });
     refresh();
     return { status: 'ok' };
   });
@@ -186,6 +226,10 @@ export async function deleteSpending(
 
 const resources = {
   category: { path: '/api/v1/categories', empty: MESSAGES.categoryName },
+  incomeCategory: {
+    path: '/api/v1/income-categories',
+    empty: MESSAGES.categoryName,
+  },
   account: { path: '/api/v1/accounts', empty: MESSAGES.accountName },
 } as const;
 
@@ -248,6 +292,21 @@ export async function deleteCategory(item: {
   return deleteNamed('category', item);
 }
 
+/** Adds a custom income category (specs/009 FR-023). */
+export async function createIncomeCategory(
+  name: string,
+): Promise<ActionResult> {
+  return createNamed('incomeCategory', name);
+}
+
+/** Removes a custom income category no income entry uses (specs/009 FR-023). */
+export async function deleteIncomeCategory(item: {
+  id: string;
+  name: string;
+}): Promise<ActionResult> {
+  return deleteNamed('incomeCategory', item);
+}
+
 /** Adds an account (FR-082, FR-083). */
 export async function createAccount(name: string): Promise<ActionResult> {
   return createNamed('account', name);
@@ -265,6 +324,7 @@ export async function deleteAccount(item: {
 // CSV import (specs/004-csv-import research R-013)
 
 const importInput = z.object({
+  ledger: ledgerInput,
   rows: z
     .array(
       z.object({
@@ -301,24 +361,25 @@ export type ImportResult =
   | { status: 'already-imported' }
   | { status: 'signed-out' };
 
-/** `#/spendings/3/amount/amount` → row 3, field `amount`. */
-const ROW_POINTER = /^#\/spendings\/(\d+)\/(\w+)/;
+/** `#/spendings/3/amount/amount` (or `#/incomes/3/…`) → row 3, field `amount`. */
+const ROW_POINTER = /^#\/(?:spendings|incomes)\/(\d+)\/(\w+)/;
 const API_FIELDS: Record<string, Field> = {
   date: 'date',
   merchant: 'merchant',
+  source: 'merchant',
   amount: 'amount',
   categoryName: 'category',
   accountName: 'account',
 };
 
-function rowErrorsOf(error: ApiError): ImportRowError[] {
+function rowErrorsOf(error: ApiError, ledger: Ledger): ImportRowError[] {
   return (error.errors ?? []).flatMap((violation) => {
     const match = ROW_POINTER.exec(violation.pointer ?? '');
     const field = match ? API_FIELDS[match[2] ?? ''] : undefined;
     if (!match || !field) {
       return [];
     }
-    const message = violationMessage(violation) ?? MESSAGES.unavailable;
+    const message = violationMessage(violation, ledger) ?? MESSAGES.unavailable;
     return [{ row: Number(match[1]), field, message }];
   });
 }
@@ -329,7 +390,8 @@ function refused(rowErrors: ImportRowError[]): ImportResult {
 }
 
 /**
- * Adds every reviewed row as a spending in one all-or-nothing request (FR-032, FR-033). The
+ * Adds every reviewed row as a spending (or, with `ledger: 'income'`, an income entry) in one
+ * all-or-nothing request (FR-032, FR-033). The
  * Idempotency-Key makes a doubled or retried add import once (FR-034); a key the server already
  * used for other rows means an earlier attempt was saved, so the result is `already-imported`.
  * Returns the month of the latest imported date (FR-035).
@@ -341,10 +403,11 @@ export async function importSpendings(
   if (!parsed.success) {
     return { status: 'error', message: MESSAGES.unavailable };
   }
-  const { rows, idempotencyKey, today, currency, lookups } = parsed.data;
+  const { ledger, rows, idempotencyKey, today, currency, lookups } =
+    parsed.data;
 
   const local = rows.flatMap(({ draft }, row) => {
-    const problems = draftProblems(draft, today, lookups);
+    const problems = draftProblems(draft, today, lookups, ledger);
     return FIELDS.flatMap((field) => {
       const message = problems[field];
       return message ? [{ row, field, message }] : [];
@@ -354,22 +417,33 @@ export async function importSpendings(
     return refused(local);
   }
 
-  const body: SpendingImportRequest = {
-    spendings: rows.map(({ draft }) => ({
-      date: draft.date,
-      merchant: draft.merchant.trim(),
-      amount: { amount: parseAmountInput(draft.amount) ?? '', currency },
-      categoryName: draft.category.trim(),
-      accountName: draft.account.trim(),
-    })),
-  };
+  const toRow = ({ draft }: (typeof rows)[number]) => ({
+    date: draft.date,
+    amount: { amount: parseAmountInput(draft.amount) ?? '', currency },
+    categoryName: draft.category.trim(),
+    accountName: draft.account.trim(),
+  });
+  const body: SpendingImportRequest | IncomeImportRequest =
+    ledger === 'income'
+      ? {
+          incomes: rows.map((row) => ({
+            ...toRow(row),
+            source: row.draft.merchant.trim(),
+          })),
+        }
+      : {
+          spendings: rows.map((row) => ({
+            ...toRow(row),
+            merchant: row.draft.merchant.trim(),
+          })),
+        };
 
   if (!(await signedIn())) {
     return SIGNED_OUT;
   }
   try {
-    const saved = await authedFetch<SpendingImport>(
-      '/api/v1/spending-imports',
+    const saved = await authedFetch<SpendingImport | IncomeImport>(
+      LEDGER_PATHS[ledger].imports,
       {
         method: 'POST',
         headers: {
@@ -383,7 +457,7 @@ export async function importSpendings(
     return {
       status: 'ok',
       month: monthParam(monthOf(saved.lastDate)),
-      count: saved.spendingCount,
+      count: 'incomeCount' in saved ? saved.incomeCount : saved.spendingCount,
     };
   } catch (error) {
     if (error instanceof UnauthenticatedError) {
@@ -396,10 +470,11 @@ export async function importSpendings(
       refresh();
       return { status: 'already-imported' };
     }
-    const rowErrors = error instanceof ApiError ? rowErrorsOf(error) : [];
+    const rowErrors =
+      error instanceof ApiError ? rowErrorsOf(error, ledger) : [];
     if (rowErrors.length > 0) {
       return refused(rowErrors);
     }
-    return { status: 'error', message: messageFor(error) };
+    return { status: 'error', message: messageFor(error, { ledger }) };
   }
 }

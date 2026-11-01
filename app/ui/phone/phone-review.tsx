@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { importSpendings } from '@/app/lib/actions';
-import { added, MESSAGES, PHONE, rowCount } from '@/app/lib/messages';
+import { PHONE, rowCount } from '@/app/lib/messages';
 import { type DraftLookups, namesOnly } from '@/app/lib/draft';
 import {
   importAddLabel,
@@ -17,6 +17,8 @@ import {
   type ImportSession,
   usePhoneUi,
 } from '@/app/ui/phone/phone-ui-provider';
+import { useLedger } from '@/app/ui/ledger-context';
+import { ledgerHref } from '@/app/lib/ledger';
 
 const tone = (warn: boolean) => (warn ? 'font-semibold text-warn' : undefined);
 
@@ -37,12 +39,13 @@ export default function PhoneReview({
 }) {
   const router = useRouter();
   const ui = usePhoneUi();
+  const { ledger, text } = useLedger();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState('');
   const adding = useRef(false);
   const { rows, fileName, idempotencyKey } = session;
   const banner = importBanner(rows, today, lookups);
-  const button = importAddLabel(rows, today, lookups);
+  const button = importAddLabel(rows, today, lookups, ledger);
 
   const add = () => {
     if (button.disabled || adding.current) {
@@ -52,6 +55,7 @@ export default function PhoneReview({
     setMessage('');
     startTransition(async () => {
       const result = await importSpendings({
+        ledger,
         rows,
         idempotencyKey,
         today,
@@ -61,11 +65,11 @@ export default function PhoneReview({
       adding.current = result.status === 'ok';
       if (result.status === 'ok') {
         ui.close(2, () => {
-          router.push(`/spendings?month=${result.month}`, { scroll: false });
-          ui.notify(added(result.count, fileName));
+          router.push(ledgerHref(ledger, result.month), { scroll: false });
+          ui.notify(text.added(result.count, fileName));
         });
       } else if (result.status === 'already-imported') {
-        ui.close(2, () => ui.notify(MESSAGES.alreadyImported));
+        ui.close(2, () => ui.notify(text.alreadyImported));
       } else if (result.status === 'signed-out') {
         router.replace('/');
       } else {
@@ -122,7 +126,13 @@ export default function PhoneReview({
         ) : (
           <ul className="divide-y divide-line-soft overflow-hidden rounded-2xl bg-surface ring-1 ring-line">
             {rows.map((row) => {
-              const view = importRowDisplay(row, today, currency, lookups);
+              const view = importRowDisplay(
+                row,
+                today,
+                currency,
+                lookups,
+                ledger,
+              );
               return (
                 <li key={row.key}>
                   <button

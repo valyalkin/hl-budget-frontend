@@ -10,16 +10,12 @@ import {
   type Field,
   namesOnly,
 } from '@/app/lib/draft';
-import { addLabel, needAttention, rowCount } from '@/app/lib/messages';
-import {
-  formatCents,
-  parseAmountInput,
-  plural,
-  toCents,
-} from '@/app/lib/utils';
+import { needAttention, rowCount } from '@/app/lib/messages';
+import { formatCents, parseAmountInput, toCents } from '@/app/lib/utils';
 import { CloseIcon } from '@/app/ui/import/icons';
 import ImportRow from '@/app/ui/import/import-row';
 import type { ImportLookups } from '@/app/ui/import/import-provider';
+import { useLedger } from '@/app/ui/ledger-context';
 
 type Problems = Partial<Record<Field, string>>;
 
@@ -50,6 +46,7 @@ export default function ReviewStage({
   onAlreadyImported: () => void;
 }) {
   const router = useRouter();
+  const { ledger, text } = useLedger();
   const messageId = useId();
   const { today, currency, categories, accounts, merchants } = lookups;
   const [rows, setRows] = useState<Row[]>([...initialRows]);
@@ -67,7 +64,7 @@ export default function ReviewStage({
 
   const problemsOf = (row: Row): Problems => ({
     ...serverErrors[row.key],
-    ...draftProblems(row.draft, today, { categories, accounts }),
+    ...draftProblems(row.draft, today, { categories, accounts }, ledger),
   });
   const needing = rows.filter(
     (row) => Object.keys(problemsOf(row)).length > 0,
@@ -126,6 +123,7 @@ export default function ReviewStage({
     const sent = rows;
     startTransition(async () => {
       const result = await importSpendings({
+        ledger,
         rows: sent,
         idempotencyKey,
         today,
@@ -254,7 +252,7 @@ export default function ReviewStage({
       <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
         <div className="flex flex-col gap-1">
           <span className="text-sm text-muted">
-            {plural(rows.length, 'spending', 'spendings')} · total{' '}
+            {text.addLabel(rows.length).replace(/^Add /, '')} · total{' '}
             {formatCents(totalCents, currency)}
           </span>
           <p
@@ -281,7 +279,7 @@ export default function ReviewStage({
             onClick={add}
             className="min-h-11 rounded-xl bg-brand px-6 font-semibold text-white hover:bg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:bg-line disabled:text-disabled"
           >
-            {addLabel(canAdd ? rows.length : 0)}
+            {text.addLabel(canAdd ? rows.length : 0)}
           </button>
         </div>
       </div>

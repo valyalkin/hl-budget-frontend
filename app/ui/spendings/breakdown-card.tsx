@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { useLedger } from '@/app/ui/ledger-context';
 import BreakdownPie from '@/app/ui/spendings/breakdown-pie';
 import {
   BREAKDOWN,
@@ -52,11 +53,18 @@ function viewStore(storageKey: string) {
   };
 }
 
-// One store per breakdown, so By category and By account never share a choice (specs/008 FR-002).
-const stores: Record<BreakdownKind, ReturnType<typeof viewStore>> = {
-  category: viewStore(BREAKDOWN.category.storageKey),
-  account: viewStore(BREAKDOWN.account.storageKey),
-};
+// One store per storage key, so By category and By account never share a choice (specs/008
+// FR-002), and neither do the Spendings and Income cards (specs/009 FR-064).
+const stores = new Map<string, ReturnType<typeof viewStore>>();
+
+function storeFor(storageKey: string) {
+  let store = stores.get(storageKey);
+  if (!store) {
+    store = viewStore(storageKey);
+    stores.set(storageKey, store);
+  }
+  return store;
+}
 
 /**
  * Where the month's money went, by category (US5) or by account (specs/008 US1), as a table or a
@@ -76,7 +84,8 @@ export default function BreakdownCard({
   totalCents: number;
   items: BreakdownItem[];
 }) {
-  const store = stores[kind];
+  const { text } = useLedger();
+  const store = storeFor(text.storageKeys[kind]);
   const view = useSyncExternalStore(
     store.subscribe,
     store.snapshot,
@@ -119,7 +128,7 @@ export default function BreakdownCard({
       </div>
       {items.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted">
-          Nothing spent in {label}.
+          {text.nothingIn} {label}.
         </p>
       ) : view === 'table' ? (
         <BreakdownTable
@@ -131,6 +140,7 @@ export default function BreakdownCard({
       ) : (
         <BreakdownPie
           kind={kind}
+          noun={text.breakdownNoun}
           items={items}
           totalCents={totalCents}
           currency={currency}

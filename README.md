@@ -24,6 +24,16 @@ Feature specs live in the `hl-budget-spec` repository (`specs/001-platform-found
   row in an editable table (same calendar, autofill and keys as the entry row), then add them all
   at once. The file is parsed in the browser (`app/lib/csv.ts`, `app/lib/csv-import.ts`) and never
   uploaded; dates with the year last are read day first, negative amounts become spendings.
+- `/income?month=YYYY-MM` (specs/009): the same screen for income, from the same components
+  (`app/ui/ledger-page.tsx`). Spendings | Income tabs in the header (`app/ui/ledger-tabs.tsx`)
+  keep `?month=` and replace the history entry. `app/lib/ledger.ts` holds every text and storage
+  key that differs; a `LedgerProvider` passes the ledger to the client components, and spendings
+  is the default. The table's party column is Source; categories are the income categories
+  (Salary, Investments and the user's own); accounts are shared. `loadLedgerPage` reads the income
+  endpoints and maps them into the spending shapes (an income's `source` becomes the entry's
+  `merchant`). Import CSV on Income reads a Source / Payer / Employer column and offers
+  `/sample-income.csv`. Settings has Spending categories, Income categories and Accounts (with both
+  counts). Gated in `proxy.ts`; `noindex`.
 - **Phones (below 640px wide)**: the same `/spendings` address shows a touch layout instead
   (specs/006-mobile-view): Month and Year dropdowns, the month total, a compact list with a
   floating Add spending button, By category and By account (a three-option switch) as a table or a

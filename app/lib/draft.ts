@@ -1,3 +1,4 @@
+import { LEDGER, type Ledger } from '@/app/lib/ledger';
 import { MESSAGES } from '@/app/lib/messages';
 import { exactMatch, isValidDate, parseAmountInput } from '@/app/lib/utils';
 
@@ -41,7 +42,9 @@ export function draftProblems(
   draft: Draft,
   today: string,
   lookups: DraftLookups,
+  ledger: Ledger = 'spendings',
 ): Partial<Record<Field, string>> {
+  const text = LEDGER[ledger];
   const problems: Partial<Record<Field, string>> = {};
   if (!isValidDate(draft.date)) {
     problems.date = MESSAGES.pickDate;
@@ -50,13 +53,13 @@ export function draftProblems(
   }
   const merchant = draft.merchant.trim();
   if (!merchant || merchant.length > MAX_MERCHANT) {
-    problems.merchant = MESSAGES.merchant;
+    problems.merchant = text.partyMissing;
   }
   const category = draft.category.trim();
   if (!category || category.length > MAX_NAME) {
     problems.category = MESSAGES.category;
   } else if (!exactMatch(category, lookups.categories)) {
-    problems.category = MESSAGES.unknownCategory;
+    problems.category = text.unknownCategory;
   }
   const account = draft.account.trim();
   if (!account || account.length > MAX_NAME) {
@@ -78,8 +81,9 @@ export function draftProblem(
   draft: Draft,
   today: string,
   lookups: DraftLookups,
+  ledger: Ledger = 'spendings',
 ): DraftProblem | null {
-  const problems = draftProblems(draft, today, lookups);
+  const problems = draftProblems(draft, today, lookups, ledger);
   const field = FIELDS.find((name) => problems[name] !== undefined);
   const message = field ? problems[field] : undefined;
   return field && message ? { field, message } : null;

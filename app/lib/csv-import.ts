@@ -1,3 +1,4 @@
+import type { Ledger } from '@/app/lib/ledger';
 import { parseCsv } from '@/app/lib/csv';
 import type { Draft } from '@/app/lib/draft';
 import {
@@ -44,6 +45,21 @@ const PATTERNS: readonly (readonly [Column, RegExp])[] = [
   ['merchant', /merchant|description|payee|vendor|name|memo|store|details/],
 ];
 
+/**
+ * An income file names who paid in a Source (or Payer, Employer) column, so for income `source`
+ * means the party, not the account (specs/009 research R-009). Spending files keep [PATTERNS].
+ */
+const INCOME_PATTERNS: readonly (readonly [Column, RegExp])[] = [
+  ['date', /date|posted|day/],
+  ['category', /categ/],
+  ['account', /account|card/],
+  ['amount', /amount|total|value|credit|deposit|price/],
+  [
+    'merchant',
+    /source|payer|employer|merchant|description|payee|name|memo|details/,
+  ],
+];
+
 /** The order of columns in a file without a header row. */
 const FIXED: ColumnMap = {
   date: 0,
@@ -54,7 +70,10 @@ const FIXED: ColumnMap = {
 };
 
 /** Column indexes for the five fields (-1 when missing), or null when the row is not a header. */
-export function mapColumns(header: readonly string[]): ColumnMap | null {
+export function mapColumns(
+  header: readonly string[],
+  ledger: Ledger = 'spendings',
+): ColumnMap | null {
   const names = header.map((cell) => cell.trim().toLowerCase());
   const used = new Set<number>();
   const map: ColumnMap = {
@@ -64,7 +83,9 @@ export function mapColumns(header: readonly string[]): ColumnMap | null {
     account: -1,
     amount: -1,
   };
-  for (const [field, pattern] of PATTERNS) {
+  for (const [field, pattern] of ledger === 'income'
+    ? INCOME_PATTERNS
+    : PATTERNS) {
     const index = names.findIndex(
       (name, i) => !used.has(i) && pattern.test(name),
     );
@@ -136,13 +157,17 @@ function matchName(text: string, items: readonly { name: string }[]): string {
 }
 
 /** Every data row of the file, in file order, as review rows. */
-export function rowsFromCsv(text: string, lookups: ImportLookups): ImportRow[] {
+export function rowsFromCsv(
+  text: string,
+  lookups: ImportLookups,
+  ledger: Ledger = 'spendings',
+): ImportRow[] {
   const grid = parseCsv(text);
   const header = grid[0];
   if (!header) {
     return [];
   }
-  const mapped = mapColumns(header);
+  const mapped = mapColumns(header, ledger);
   const columns = mapped ?? FIXED;
   const data = mapped ? grid.slice(1) : grid;
   return data.map((cells, index) => {
@@ -181,8 +206,9 @@ export function checkFile(file: {
 export function readImport(
   text: string,
   lookups: ImportLookups,
+  ledger: Ledger = 'spendings',
 ): { rows: ImportRow[] } | { error: ImportRefusal } {
-  const rows = rowsFromCsv(text, lookups);
+  const rows = rowsFromCsv(text, lookups, ledger);
   if (rows.length === 0) {
     return { error: 'noRows' };
   }

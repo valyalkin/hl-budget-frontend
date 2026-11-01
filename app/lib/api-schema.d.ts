@@ -80,6 +80,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/incomes/{incomeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch one of the caller's income entries */
+        get: operations["getIncome"];
+        /**
+         * Replace all details of an income entry
+         * @description The income category and the account are each given by id or by name (exactly one of each pair). A name is matched against the caller's income categories or accounts ignoring case and surrounding spaces; a name that matches none, including a spending category's name, is refused with NotFound and nothing is created.
+         */
+        put: operations["updateIncome"];
+        post?: never;
+        /** Delete an income entry permanently */
+        delete: operations["deleteIncome"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/income-categories/{incomeCategoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch one of the caller's income categories */
+        get: operations["getIncomeCategory"];
+        /**
+         * Rename a custom income category; its colour is kept
+         * @description Salary and Investments cannot be renamed: 422 with `details.reason = default-category`.
+         */
+        put: operations["renameIncomeCategory"];
+        post?: never;
+        /**
+         * Delete a custom income category that no income entry uses
+         * @description Salary and Investments cannot be deleted: 422 with `details.reason = default-category`.
+         */
+        delete: operations["deleteIncomeCategory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/categories/{categoryId}": {
         parameters: {
             query?: never;
@@ -175,6 +222,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/incomes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's income entries, paged, filtered and sorted
+         * @description Filters are optional and combine with AND; repeating `categoryId` (income categories) or `accountId` matches any of the given ids. Ties in the sort order are broken by creation time in the same direction, then by id, so paging never skips or repeats an entry.
+         */
+        get: operations["listIncomes"];
+        put?: never;
+        /**
+         * Record an income entry
+         * @description Send an `Idempotency-Key` to make retries safe: repeating a create with the same key and the same body returns the first entry with 200 and `Idempotent-Replayed: true` instead of creating another. The key is freed when that entry is deleted. The income category and the account are each given by id or by name (exactly one of each pair). A name is matched against the caller's income categories or accounts ignoring case and surrounding spaces; a name that matches none, including a spending category's name, is refused with NotFound and nothing is created.
+         */
+        post: operations["createIncome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/income-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record many income entries at once, all or nothing
+         * @description Creates every row as an income entry in one step. If any row is invalid, nothing is created and every problem is listed, with a JSON Pointer naming the row (`#/incomes/3/date`).
+         *
+         *     Income categories and accounts are given by name. Each name must match one of the caller's income categories or accounts, ignoring case and surrounding spaces; a name that matches none is refused with NotFound at that row, and nothing is created. Categories and accounts are created only through their own endpoints.
+         *
+         *     Send an `Idempotency-Key` to make retries safe: repeating an import with the same key and the same rows returns the first import with 200 and `Idempotent-Replayed: true` instead of creating the entries again.
+         */
+        post: operations["createIncomeImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/income-categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all of the caller's income categories, sorted by name, with income counts
+         * @description On the caller's first budgeting call Salary and Investments are created for them, exactly once, so this never returns an empty list. Spending categories are never listed here. Not paged.
+         */
+        get: operations["listIncomeCategories"];
+        put?: never;
+        /** Create a custom income category */
+        post: operations["createIncomeCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/categories": {
         parameters: {
             query?: never;
@@ -257,6 +373,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/monthly-income-totals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's income total and entry count for each month of a year
+         * @description Always 12 entries, January to December; a month with no income has a zero total and count. `today` is the current date in the app's time zone. Spendings are never included.
+         */
+        get: operations["listMonthlyIncomeTotals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/merchants": {
         parameters: {
             query?: never;
@@ -269,6 +405,86 @@ export interface paths {
          * @description Merchants are derived from spendings, not stored: spendings whose merchant is equal ignoring letter case and surrounding spaces count as one merchant. `name`, `lastCategory` and `lastAccount` come from that merchant's most recent spending. Ordered by `spendingCount` descending, then name.
          */
         get: operations["listMerchants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/income-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's past income sources, most used first, for autofill
+         * @description Sources are derived from income entries only (never from spendings): entries whose source is equal ignoring letter case and surrounding spaces count as one. `name`, `lastCategory` and `lastAccount` come from its most recent entry. Ordered by `incomeCount` descending, then name.
+         */
+        get: operations["listIncomeSources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/income-imports/{importId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One of the caller's income imports
+         * @description The summary recorded when the import was created. It does not change when the imported entries are later edited or deleted. Another user's import is 404, like an unknown id.
+         */
+        get: operations["getIncomeImport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/income-category-totals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's income per income category over a date range
+         * @description One entry per income category with income in the range, and only those; largest total first, ties by name. The same range rules as /api/v1/category-totals. Not paged: bounded by the caller's income category count.
+         */
+        get: operations["listIncomeCategoryTotals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/income-account-totals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's income per account over a date range
+         * @description One entry per account that received income in the range, and only those; largest total first, ties by name, each with the account's colour. The same range rules as /api/v1/account-totals. Not paged: bounded by the caller's account count.
+         */
+        get: operations["listIncomeAccountTotals"];
         put?: never;
         post?: never;
         delete?: never;
@@ -477,12 +693,102 @@ export interface components {
              */
             updatedAt: string;
         };
+        IncomeRequest: {
+            /**
+             * Format: date
+             * @description Today or earlier, in the app's time zone
+             * @example 2026-10-15
+             */
+            date: string;
+            /**
+             * @description Who paid it
+             * @example Acme Corp
+             */
+            source: string;
+            amount: components["schemas"]["Money"];
+            /**
+             * Format: uuid
+             * @description One of the caller's income categories. Give exactly one of categoryId and categoryName
+             * @example 6e7f8091-2b3c-4d4e-8f5a-6b7c8d9e0f12
+             */
+            categoryId?: string | null;
+            /**
+             * Format: uuid
+             * @description One of the caller's accounts. Give exactly one of accountId and accountName
+             * @example 3f1c5a8e-2b7d-4e0a-9c61-0d2f4b8a7e11
+             */
+            accountId?: string | null;
+            /**
+             * @description Instead of categoryId: matched against the caller's income categories ignoring case and surrounding spaces. Refused (422, NotFound) when none matches, including a spending category's name; never creates a category
+             * @example Salary
+             */
+            categoryName?: string | null;
+            /**
+             * @description Instead of accountId: matched against the caller's accounts ignoring case and surrounding spaces. Refused (422, NotFound) when none matches; never creates an account
+             * @example Debit card
+             */
+            accountName?: string | null;
+        };
+        /** @description One of the caller's income entries */
+        Income: {
+            /**
+             * Format: uuid
+             * @example 9b1e2c3d-4f5a-4b6c-8d7e-0f1a2b3c4d5e
+             */
+            id: string;
+            /**
+             * Format: date
+             * @example 2026-10-15
+             */
+            date: string;
+            /**
+             * @description Who paid it
+             * @example Acme Corp
+             */
+            source: string;
+            amount: components["schemas"]["Money"];
+            /** @description One of the caller's income categories */
+            category: components["schemas"]["Ref"];
+            account: components["schemas"]["Ref"];
+            /**
+             * Format: date-time
+             * @example 2026-10-15T14:03:11Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-10-15T14:03:11Z
+             */
+            updatedAt: string;
+        };
         NameRequest: {
             /**
              * @description Trimmed before use; unique per user ignoring case
              * @example Amex
              */
             name: string;
+        };
+        /** @description What kind of income it is; a separate list from spending categories */
+        IncomeCategory: {
+            /**
+             * Format: uuid
+             * @example 6e7f8091-2b3c-4d4e-8f5a-6b7c8d9e0f12
+             */
+            id: string;
+            /** @example Salary */
+            name: string;
+            /**
+             * Format: int64
+             * @description How many of the caller's income entries use this category
+             */
+            readonly incomeCount: number;
+            /**
+             * @description The category's colour in charts. Fixed for Salary and Investments; assigned once to a custom income category when it is created and kept after renaming
+             * @example #1e5b45
+             */
+            readonly color: string;
+            /** @description True for Salary and Investments, which every user starts with; they cannot be renamed or deleted */
+            readonly isDefault: boolean;
         };
         /** @description What the caller's money was spent on */
         Category: {
@@ -525,6 +831,11 @@ export interface components {
              * @example #e11d48
              */
             readonly color: string;
+            /**
+             * Format: int64
+             * @description How many of the caller's income entries use this account
+             */
+            readonly incomeCount: number;
         };
         /** @description The rows to import, in the order the user reviewed them */
         SpendingImportRequest: {
@@ -594,6 +905,64 @@ export interface components {
              */
             createdAt: string;
         };
+        /** @description The income rows to import, in the order the user reviewed them */
+        IncomeImportRequest: {
+            incomes: components["schemas"]["IncomeImportRow"][];
+        };
+        /** @description One income entry. The same rules as IncomeRequest, with category and account by name */
+        IncomeImportRow: {
+            /**
+             * Format: date
+             * @description Today or earlier, in the app's time zone
+             * @example 2026-10-15
+             */
+            date: string;
+            /** @example Acme Corp */
+            source: string;
+            amount: components["schemas"]["Money"];
+            /**
+             * @description Matched against the caller's income categories ignoring case and surrounding spaces. Refused (422, NotFound) when none matches; never creates a category
+             * @example Salary
+             */
+            categoryName: string;
+            /**
+             * @description Matched against the caller's accounts ignoring case and surrounding spaces. Refused (422, NotFound) when none matches; never creates an account
+             * @example Debit card
+             */
+            accountName: string;
+        };
+        /** @description The receipt of a completed income import. Holds nothing from the file */
+        IncomeImport: {
+            /**
+             * Format: uuid
+             * @example 4c2d1e0f-9a8b-4c7d-8e6f-5a4b3c2d1e0f
+             */
+            id: string;
+            /**
+             * Format: int32
+             * @description How many income entries were created
+             * @example 2
+             */
+            incomeCount: number;
+            /**
+             * Format: date
+             * @description The earliest date in the import
+             * @example 2026-10-15
+             */
+            firstDate: string;
+            /**
+             * Format: date
+             * @description The latest date in the import; clients show this month afterwards
+             * @example 2026-10-20
+             */
+            lastDate: string;
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: date-time
+             * @example 2026-10-29T14:03:11Z
+             */
+            createdAt: string;
+        };
         /** @description One page of the caller's spendings; `items` is empty when nothing matches */
         SpendingPage: {
             items: components["schemas"]["Spending"][];
@@ -638,6 +1007,33 @@ export interface components {
             today: string;
             months: components["schemas"]["MonthTotal"][];
         };
+        /** @description One month's income; zero when nothing was received */
+        IncomeMonthTotal: {
+            /** @example 2026-10 */
+            month: string;
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @description How many income entries make up the total
+             * @example 3
+             */
+            entryCount: number;
+        };
+        /** @description Income for every month of a year, January to December */
+        IncomeMonthlyTotals: {
+            /**
+             * Format: int32
+             * @example 2026
+             */
+            year: number;
+            /**
+             * Format: date
+             * @description Today in the app's time zone
+             * @example 2026-10-28
+             */
+            today: string;
+            months: components["schemas"]["IncomeMonthTotal"][];
+        };
         /** @description A merchant derived from the caller's spendings */
         Merchant: {
             /**
@@ -665,6 +1061,120 @@ export interface components {
             items: components["schemas"]["Merchant"][];
             /** @description True when the caller has more merchants than `limit` */
             truncated: boolean;
+        };
+        /** @description One page of the caller's income entries; `items` is empty when nothing matches */
+        IncomePage: {
+            items: components["schemas"]["Income"][];
+            /**
+             * Format: int32
+             * @description 0-based page number
+             */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /**
+             * Format: int64
+             * @description Income entries matching the filters, across all pages
+             */
+            totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        /** @description A source derived from the caller's income entries: entries whose source is equal ignoring case and surrounding spaces. `name`, `lastCategory` and `lastAccount` come from the most recent one */
+        IncomeSource: {
+            /** @example Acme Corp */
+            name: string;
+            /**
+             * Format: int64
+             * @description How many of the caller's income entries have this source
+             */
+            incomeCount: number;
+            /**
+             * Format: date
+             * @example 2026-10-15
+             */
+            lastUsedOn: string;
+            lastCategory: components["schemas"]["Ref"];
+            lastAccount: components["schemas"]["Ref"];
+        };
+        /** @description Sources, most used first; `truncated` is true when more exist */
+        IncomeSourceList: {
+            items: components["schemas"]["IncomeSource"][];
+            truncated: boolean;
+        };
+        /** @description One income category's income in the range */
+        IncomeCategoryTotal: {
+            category: components["schemas"]["Ref"];
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @example 1
+             */
+            entryCount: number;
+            /**
+             * @description The income category's colour, the same as IncomeCategory.color
+             * @example #1e5b45
+             */
+            color: string;
+        };
+        /** @description Income per income category over a date range: only categories with income, largest first */
+        IncomeCategoryTotals: {
+            /**
+             * Format: date
+             * @example 2026-10-01
+             */
+            from: string;
+            /**
+             * Format: date
+             * @example 2026-10-31
+             */
+            to: string;
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @example 3
+             */
+            entryCount: number;
+            items: components["schemas"]["IncomeCategoryTotal"][];
+        };
+        /** @description All of the caller's income categories, sorted by name (never paged) */
+        IncomeCategoryList: {
+            items: components["schemas"]["IncomeCategory"][];
+        };
+        /** @description One account's income in the range */
+        IncomeAccountTotal: {
+            account: components["schemas"]["Ref"];
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @example 2
+             */
+            entryCount: number;
+            /**
+             * @description The account's colour, the same as Account.color
+             * @example #e11d48
+             */
+            color: string;
+        };
+        /** @description Income per account over a date range: only accounts that received income, largest first */
+        IncomeAccountTotals: {
+            /**
+             * Format: date
+             * @example 2026-10-01
+             */
+            from: string;
+            /**
+             * Format: date
+             * @example 2026-10-31
+             */
+            to: string;
+            total: components["schemas"]["MoneyTotal"];
+            /**
+             * Format: int64
+             * @example 3
+             */
+            entryCount: number;
+            items: components["schemas"]["IncomeAccountTotal"][];
         };
         /** @description One category's spending in the range */
         CategoryTotal: {
@@ -860,7 +1370,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Spendings still use this account or category; move or delete them first (`details.reason = in-use`, `details.spendingCount`) */
+        /** @description Entries still use this account or category; move or delete them first (`details.reason = in-use`, `details.spendingCount`; for an account also `details.incomeCount`, the income entries that use it) */
         InUse: {
             headers: {
                 "X-Request-Id": components["headers"]["X-Request-Id"];
@@ -922,6 +1432,36 @@ export interface components {
         };
         /** @description Nothing was created. Every invalid field of every row is listed in `errors`, its pointer naming the row by its 0-based position (`#/spendings/3/amount/amount`). Codes are those of SpendingRequest (Required, TypeMismatch, NotBlank, Size, Pattern, Positive, UnsupportedCurrency, NotFuture), NotFound on a category or account name that matches none of the caller's items (an import never creates one), plus Size on `#/spendings` for 0 or more than 1000 rows. `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for different rows */
         SpendingImportValidationFailed: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Invalid fields, each listed in `errors`, with the same codes as SpendingValidationFailed. NotFound marks an unknown or another user's income category or account, by id or by name; a spending category's name is not an income category, and a name never creates one. On create only, `details.reason = idempotency-key-reused` when the Idempotency-Key was already used for a different income */
+        IncomeValidationFailed: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Nothing was created. Every invalid field of every row is listed in `errors`, its pointer naming the row by its 0-based position (`#/incomes/3/amount/amount`), with the codes of SpendingImportValidationFailed; NotFound on a name that matches none of the caller's income categories or accounts */
+        IncomeImportValidationFailed: {
+            headers: {
+                "X-Request-Id": components["headers"]["X-Request-Id"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Income entries still use this income category; move or delete them first (`details.reason = in-use`, `details.incomeCount`) */
+        IncomeCategoryInUse: {
             headers: {
                 "X-Request-Id": components["headers"]["X-Request-Id"];
                 [name: string]: unknown;
@@ -1124,6 +1664,178 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getIncome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incomeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The income entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Income"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    updateIncome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incomeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncomeRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Income"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ConcurrentModification"];
+            422: components["responses"]["IncomeValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    deleteIncome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incomeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getIncomeCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incomeCategoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The income category */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeCategory"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    renameIncomeCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incomeCategoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameRequest"];
+            };
+        };
+        responses: {
+            /** @description Renamed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeCategory"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["DuplicateNameOrConcurrent"];
+            422: components["responses"]["ValidationOrDefaultCategory"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    deleteIncomeCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incomeCategoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["IncomeCategoryInUse"];
+            422: components["responses"]["DefaultCategory"];
             500: components["responses"]["InternalError"];
             503: components["responses"]["ServiceUnavailable"];
         };
@@ -1443,6 +2155,201 @@ export interface operations {
             503: components["responses"]["ServiceUnavailable"];
         };
     };
+    listIncomes: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Earliest date, inclusive
+                 * @example 2026-10-01
+                 */
+                from?: string;
+                /**
+                 * @description Latest date, inclusive; must not be before `from`
+                 * @example 2026-10-31
+                 */
+                to?: string;
+                /** @description Repeatable; matches any of the given income categories */
+                categoryId?: string[];
+                /** @description Repeatable; matches any of the given accounts */
+                accountId?: string[];
+                /** @description 0-based page number */
+                page?: number;
+                /** @description Items per page, 1 to 100 */
+                size?: number;
+                /** @description Sort order */
+                sort?: "date,desc" | "date,asc" | "amount,desc" | "amount,asc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page; `items` is empty when nothing matches */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    createIncome: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional. 1 to 255 visible ASCII characters, unique per create you want deduplicated
+                 * @example 5d1f0c2e-retry-safe
+                 */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncomeRequest"];
+            };
+        };
+        responses: {
+            /** @description A replay of an earlier create with the same Idempotency-Key and body; nothing new was created */
+            200: {
+                headers: {
+                    /** @description Always `true` on a replay */
+                    "Idempotent-Replayed"?: "true";
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Income"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Income"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["IncomeValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    createIncomeImport: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional. 1 to 255 visible ASCII characters; a UUID is recommended
+                 * @example 6a1d9c2e-8f4b-4b7a-9e3c-1f2d3c4b5a69
+                 */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncomeImportRequest"];
+            };
+        };
+        responses: {
+            /** @description A replay of an earlier import with the same Idempotency-Key and rows; nothing new was created */
+            200: {
+                headers: {
+                    /** @description Always `true` on a replay */
+                    "Idempotent-Replayed"?: "true";
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeImport"];
+                };
+            };
+            /** @description Created; every row is now an income entry */
+            201: {
+                headers: {
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeImport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["IncomeImportValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listIncomeCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All income categories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeCategoryList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    createIncomeCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameRequest"];
+            };
+        };
+        responses: {
+            /** @description Created, with a colour unused among the caller's income categories while any remain */
+            201: {
+                headers: {
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeCategory"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            409: components["responses"]["DuplicateName"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
     listCategories: {
         parameters: {
             query?: never;
@@ -1609,6 +2516,36 @@ export interface operations {
             503: components["responses"]["ServiceUnavailable"];
         };
     };
+    listMonthlyIncomeTotals: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Calendar year, 2000 to 2100; defaults to the current year
+                 * @example 2026
+                 */
+                year?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Twelve months */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeMonthlyTotals"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
     listMerchants: {
         parameters: {
             query?: {
@@ -1628,6 +2565,131 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MerchantList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listIncomeSources: {
+        parameters: {
+            query?: {
+                /** @description Maximum number of sources returned, 1 to 1000 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sources; `truncated` is true when more exist than `limit` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeSourceList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getIncomeImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example 9b2f6e1a-4c3d-4e5f-8a7b-0c1d2e3f4a5b */
+                importId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The import */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeImport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listIncomeCategoryTotals: {
+        parameters: {
+            query: {
+                /**
+                 * @description Earliest date, inclusive
+                 * @example 2026-10-01
+                 */
+                from: string;
+                /**
+                 * @description Latest date, inclusive; not before `from`, at most 366 days after it
+                 * @example 2026-10-31
+                 */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Totals per income category; `items` is empty when nothing was received */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeCategoryTotals"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationFailed"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listIncomeAccountTotals: {
+        parameters: {
+            query: {
+                /**
+                 * @description Earliest date, inclusive
+                 * @example 2026-10-01
+                 */
+                from: string;
+                /**
+                 * @description Latest date, inclusive; not before `from`, at most 366 days after it
+                 * @example 2026-10-31
+                 */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Totals per account; `items` is empty when nothing was received */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeAccountTotals"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

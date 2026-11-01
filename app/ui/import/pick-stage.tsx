@@ -9,6 +9,7 @@ import {
 } from '@/app/lib/csv-import';
 import { MESSAGES } from '@/app/lib/messages';
 import { CloseIcon } from '@/app/ui/import/icons';
+import { useLedger } from '@/app/ui/ledger-context';
 
 /**
  * The first stage of the import (US1, US3, research R-012): drop a CSV file or choose one, or
@@ -25,6 +26,7 @@ export default function PickStage({
   onRows: (fileName: string, rows: ImportRow[]) => void;
   onClose: () => void;
 }) {
+  const { ledger, text: ledgerText } = useLedger();
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +37,9 @@ export default function PickStage({
     }
     const refusal = checkFile(file);
     if (refusal) {
-      setError(MESSAGES[refusal]);
+      setError(
+        refusal === 'noRows' ? ledgerText.noRowsInFile : MESSAGES[refusal],
+      );
       return;
     }
     let text: string;
@@ -45,9 +49,13 @@ export default function PickStage({
       setError(MESSAGES.unreadable);
       return;
     }
-    const result = readImport(text, lookups);
+    const result = readImport(text, lookups, ledger);
     if ('error' in result) {
-      setError(MESSAGES[result.error]);
+      setError(
+        result.error === 'noRows'
+          ? ledgerText.noRowsInFile
+          : MESSAGES[result.error],
+      );
       return;
     }
     setError(null);
@@ -69,7 +77,7 @@ export default function PickStage({
     <div className="flex flex-col">
       <div className="flex items-center justify-between gap-4 border-b border-line-soft px-6 py-4">
         <h2 id={headingId} className="font-display text-[22px] font-bold">
-          Import CSV
+          {ledgerText.importTitle}
         </h2>
         <button
           type="button"
@@ -145,8 +153,8 @@ export default function PickStage({
       </div>
       <div className="flex items-center justify-between gap-4 border-t border-line-soft px-6 py-4">
         <a
-          href="/sample-spendings.csv"
-          download="sample-spendings.csv"
+          href={ledgerText.sample}
+          download={ledgerText.sample.slice(1)}
           className="min-h-11 content-center px-1 font-semibold text-brand underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-brand"
         >
           Download sample CSV

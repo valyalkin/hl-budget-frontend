@@ -6,6 +6,7 @@ import SpendingList from '@/app/ui/phone/spending-list';
 import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
 import { renderPhone } from '@/app/ui/phone/test-support';
 import { spendings } from '@/mocks/fixtures';
+import { LedgerProvider } from '@/app/ui/ledger-context';
 
 function Layers() {
   const { layers } = usePhoneUi();
@@ -55,6 +56,20 @@ describe('SpendingList', () => {
     expect(screen.getByText('No spendings in March 2026.')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Add spending' }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('SpendingList for income (specs/009)', () => {
+  it('offers Add income and words an empty month for income', () => {
+    renderPhone(
+      <LedgerProvider ledger="income">
+        <SpendingList spendings={[]} label="October 2026" />
+      </LedgerProvider>,
+    );
+    expect(screen.getByText('No income in October 2026.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Add income' }),
     ).toBeInTheDocument();
   });
 });

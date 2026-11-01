@@ -10,6 +10,7 @@ import {
   type BreakdownItem,
   type BreakdownKind,
 } from '@/app/ui/spendings/breakdown-kind';
+import { useLedger } from '@/app/ui/ledger-context';
 
 type Item = BreakdownItem;
 export type ChartView = 'table' | 'pie';
@@ -37,6 +38,7 @@ export default function Breakdown({
   totalCents: number;
   items: readonly Item[];
 }) {
+  const { text } = useLedger();
   const { column, singular, swatchTestId } = BREAKDOWN[kind];
   const money = (cents: number) => formatCents(cents, currency);
 
@@ -57,7 +59,7 @@ export default function Breakdown({
         </p>
       ) : value === 'table' ? (
         <table
-          aria-label={`Spending by ${singular}`}
+          aria-label={`${text.breakdownNoun} by ${singular}`}
           className="w-full table-fixed overflow-hidden rounded-2xl bg-surface text-sm ring-1 ring-line"
         >
           <thead>
@@ -116,6 +118,7 @@ export default function Breakdown({
         </table>
       ) : (
         <Pie
+          noun={text.breakdownNoun}
           singular={singular}
           label={label}
           money={money}
@@ -128,12 +131,14 @@ export default function Breakdown({
 }
 
 function Pie({
+  noun,
   singular,
   label,
   money,
   totalCents,
   items,
 }: {
+  noun: string;
   singular: string;
   label: string;
   money: (cents: number) => string;
@@ -144,7 +149,7 @@ function Pie({
   return (
     <div className="flex flex-col items-center gap-5 rounded-2xl bg-surface p-4 ring-1 ring-line">
       <DonutChart
-        summary={`Donut chart of ${label} spending by ${singular}. Values are listed below.`}
+        summary={`Donut chart of ${label} ${noun.toLowerCase()} by ${singular}. Values are listed below.`}
         totalText={money(totalCents)}
         radius={92}
         inner={60}

@@ -6,6 +6,7 @@ import ImportCsvButton from '@/app/ui/import/import-csv-button';
 import ImportProvider from '@/app/ui/import/import-provider';
 import { lookups } from '@/app/ui/import/test-support';
 import SpendingsTable from '@/app/ui/spendings/spendings-table';
+import { LedgerProvider } from '@/app/ui/ledger-context';
 
 const { deleteSpending, saveSpending, push, replace } = vi.hoisted(() => ({
   deleteSpending: vi.fn(),
@@ -177,7 +178,7 @@ describe('SpendingsTable', () => {
         name: 'Remove Neighbourhood Market on Oct 27',
       }),
     );
-    expect(deleteSpending).toHaveBeenCalledWith(ids.spending1);
+    expect(deleteSpending).toHaveBeenCalledWith(ids.spending1, 'spendings');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -236,5 +237,57 @@ describe('SpendingsTable and the CSV import', () => {
       screen.getByRole('button', { name: 'Cancel new spending' }),
     );
     expect(importButton).toBeEnabled();
+  });
+});
+
+describe('SpendingsTable for income (specs/009)', () => {
+  function renderIncome(rows = spendings) {
+    render(
+      <LedgerProvider ledger="income">
+        <SpendingsTable
+          spendings={rows}
+          monthTotal={{ amount: '5120.25', currency: 'CAD' }}
+          ym={{ year: 2026, month: 10 }}
+          today={TODAY}
+          currency="CAD"
+          categories={[{ id: ids.groceries, name: 'Salary', count: 10 }]}
+          accounts={[{ id: ids.visa, name: 'Visa', count: 12 }]}
+          merchants={[]}
+        />
+      </LedgerProvider>,
+    );
+  }
+
+  it('has a Source column, counts entries and says so when a month is empty', () => {
+    renderIncome();
+    expect(
+      screen.getAllByRole('columnheader').map((h) => h.textContent)[1],
+    ).toBe('Source');
+    expect(screen.getByText('2 entries')).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Income list' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Add an income row' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the income empty message', () => {
+    renderIncome([]);
+    expect(
+      screen.getByText('No income recorded in October 2026.'),
+    ).toBeInTheDocument();
+  });
+
+  it('removes an income through the income ledger', async () => {
+    renderIncome();
+    const row = screen.getAllByRole('row')[1]!;
+    await userEvent.hover(row);
+    await userEvent.click(
+      within(row).getByRole('button', { name: /^Remove / }),
+    );
+    await waitFor(() =>
+      expect(deleteSpending).toHaveBeenCalledWith(ids.spending1, 'income'),
+    );
   });
 });

@@ -77,13 +77,7 @@ export default function PhoneApp({ data }: { data: PhoneData }) {
         return spending ? <DeleteSheet spending={spending} /> : null;
       }
       case 'settings':
-        return (
-          <PhoneSettings
-            categories={data.categories}
-            accounts={data.accounts}
-            initialTab={layer.tab}
-          />
-        );
+        return <PhoneSettings {...data.settings} initialTab={layer.tab} />;
       case 'import':
         return (
           <PhoneImport

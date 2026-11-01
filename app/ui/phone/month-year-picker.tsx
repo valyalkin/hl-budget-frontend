@@ -6,13 +6,14 @@ import { clampMonth, monthOptions, yearOptions } from '@/app/lib/phone';
 import {
   formatCents,
   monthParam,
-  plural,
   toCents,
   type YearMonth,
 } from '@/app/lib/utils';
 import { ChevronDownIcon } from '@/app/ui/phone/icons';
 import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
 import Segmented from '@/app/ui/phone/segmented';
+import { useLedger } from '@/app/ui/ledger-context';
+import { ledgerHref } from '@/app/lib/ledger';
 
 const selectClass =
   'h-12 w-full appearance-none rounded-xl bg-surface pr-10 pl-3 text-base font-medium text-ink ring-1 ring-line focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand';
@@ -39,6 +40,7 @@ export default function MonthYearPicker({
 }) {
   const router = useRouter();
   const ui = usePhoneUi();
+  const { ledger, text } = useLedger();
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(ym);
 
@@ -47,7 +49,7 @@ export default function MonthYearPicker({
     ui.clearNotice();
     startTransition(() => {
       setShown(target);
-      router.push(`/spendings?month=${monthParam(target)}`, { scroll: false });
+      router.push(ledgerHref(ledger, monthParam(target)), { scroll: false });
     });
   };
 
@@ -103,16 +105,14 @@ export default function MonthYearPicker({
         <span className="font-mono text-[clamp(1.75rem,10vw,2.5rem)] leading-tight font-medium tabular-nums">
           {formatCents(toCents(monthTotal), currency)}
         </span>
-        <span className="text-sm text-muted">
-          {plural(count, 'spending', 'spendings')}
-        </span>
+        <span className="text-sm text-muted">{text.count(count)}</span>
       </div>
       <Segmented
         label="View"
         value={ui.view}
         onChange={ui.setView}
         options={[
-          { value: 'spendings', label: 'Spendings' },
+          { value: 'spendings', label: text.view },
           { value: 'by-category', label: 'By category' },
           { value: 'by-account', label: 'By account' },
         ]}

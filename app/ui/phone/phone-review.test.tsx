@@ -120,6 +120,7 @@ describe('PhoneReview', () => {
     );
     expect(importSpendings).toHaveBeenCalledOnce();
     expect(importSpendings).toHaveBeenCalledWith({
+      ledger: 'spendings',
       rows: session.rows,
       idempotencyKey: session.idempotencyKey,
       today: TODAY,

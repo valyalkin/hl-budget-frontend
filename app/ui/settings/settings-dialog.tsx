@@ -1,17 +1,20 @@
 'use client';
 
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
-import type { NamedItem } from '@/app/lib/definitions';
+import type { SettingsData } from '@/app/lib/definitions';
 import AccountsPanel from '@/app/ui/settings/accounts-panel';
 import CategoriesPanel from '@/app/ui/settings/categories-panel';
+import IncomeCategoriesPanel from '@/app/ui/settings/income-categories-panel';
 import {
   OPEN_SETTINGS_EVENT,
   type SettingsSection,
 } from '@/app/ui/settings/open-settings';
 
 type Section = SettingsSection;
+// specs/009 FR-090: the spending categories, the income categories and the shared accounts.
 const SECTIONS: { id: Section; label: string }[] = [
-  { id: 'categories', label: 'Categories' },
+  { id: 'categories', label: 'Spending categories' },
+  { id: 'income-categories', label: 'Income categories' },
   { id: 'accounts', label: 'Accounts' },
 ];
 
@@ -22,11 +25,9 @@ const SECTIONS: { id: Section; label: string }[] = [
  */
 export default function SettingsDialog({
   categories,
+  incomeCategories,
   accounts,
-}: {
-  categories: (NamedItem & { isDefault: boolean })[];
-  accounts: NamedItem[];
-}) {
+}: SettingsData) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
@@ -40,7 +41,7 @@ export default function SettingsDialog({
   useEffect(() => {
     const onOpen = (event: Event) => {
       const wanted = (event as CustomEvent<Section>).detail;
-      setSection(wanted === 'accounts' ? 'accounts' : 'categories');
+      setSection(SECTIONS.some((s) => s.id === wanted) ? wanted : 'categories');
       if (!dialog.current?.open) {
         dialog.current?.showModal();
       }
@@ -174,6 +175,8 @@ export default function SettingsDialog({
             >
               {section === 'categories' ? (
                 <CategoriesPanel categories={categories} />
+              ) : section === 'income-categories' ? (
+                <IncomeCategoriesPanel categories={incomeCategories} />
               ) : (
                 <AccountsPanel accounts={accounts} />
               )}

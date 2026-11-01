@@ -290,3 +290,46 @@ describe('the sample file', () => {
     );
   });
 });
+
+describe('income files (specs/009 research R-009)', () => {
+  it('reads a Source column as the party for income, not the account', () => {
+    expect(
+      mapColumns(['Date', 'Source', 'Category', 'Account', 'Amount'], 'income'),
+    ).toEqual({ date: 0, merchant: 1, category: 2, account: 3, amount: 4 });
+    expect(mapColumns(['Payer', 'Date', 'Amount'], 'income')).toMatchObject({
+      merchant: 0,
+    });
+    expect(mapColumns(['Employer', 'Date', 'Amount'], 'income')).toMatchObject({
+      merchant: 0,
+    });
+  });
+
+  it('leaves spending files as they were', () => {
+    expect(mapColumns(['Date', 'Source', 'Merchant', 'Amount'])).toMatchObject({
+      account: 1,
+      merchant: 2,
+    });
+  });
+
+  it('reads the income sample into reviewable rows', () => {
+    const text = readFileSync(
+      join(process.cwd(), 'public', 'sample-income.csv'),
+      'utf8',
+    );
+    const result = readImport(
+      text,
+      {
+        categories: [{ name: 'Salary' }, { name: 'Investments' }],
+        accounts: [{ name: 'Chequing' }],
+      },
+      'income',
+    );
+    expect('rows' in result && result.rows[0]?.draft).toEqual({
+      date: '2026-10-15',
+      merchant: 'Acme Corp',
+      category: 'Salary',
+      account: 'Chequing',
+      amount: '5000.00',
+    });
+  });
+});

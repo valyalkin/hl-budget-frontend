@@ -17,6 +17,20 @@ test.describe('US2: protected pages require sign-in (SC-003)', () => {
     expect(await response.text()).not.toMatch(/<html|Spendings in/i);
   });
 
+  test('signed out, /income answers 302 to login with no income content (specs/009)', async ({
+    request,
+  }) => {
+    const response = await request.get('/income?month=2026-09', {
+      maxRedirects: 0,
+    });
+
+    expect(response.status()).toBe(302);
+    expect(response.headers()['location']).toContain(
+      '/auth/login?returnTo=%2Fincome%3Fmonth%3D2026-09',
+    );
+    expect(await response.text()).not.toMatch(/<html|Income in/i);
+  });
+
   test('after signing in, the user is back on the page they asked for', async ({
     page,
   }) => {

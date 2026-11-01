@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ids, TODAY } from '@/mocks/fixtures';
 import EntryRow, { type EntryRowProps } from '@/app/ui/spendings/entry-row';
+import { LedgerProvider } from '@/app/ui/ledger-context';
 
 const { saveSpending, replace } = vi.hoisted(() => ({
   saveSpending: vi.fn(),
@@ -369,5 +370,70 @@ describe('EntryRow', () => {
     expect(
       screen.getByRole('button', { name: 'Save spending' }),
     ).toBeDisabled();
+  });
+});
+
+describe('EntryRow for income (specs/009)', () => {
+  function renderIncomeRow() {
+    render(
+      <LedgerProvider ledger="income">
+        <table>
+          <tbody>
+            <EntryRow
+              mode="add"
+              initial={{
+                date: TODAY,
+                merchant: '',
+                category: '',
+                account: '',
+                amount: '',
+              }}
+              today={TODAY}
+              currency="CAD"
+              categories={[{ id: ids.groceries, name: 'Salary', count: 3 }]}
+              accounts={accounts}
+              merchants={[
+                {
+                  name: 'Acme Corp',
+                  count: 3,
+                  lastCategory: { id: ids.groceries, name: 'Salary' },
+                  lastAccount: { id: ids.visa, name: 'Visa' },
+                },
+              ]}
+              onSaved={vi.fn()}
+              onCancel={vi.fn()}
+              onGone={vi.fn()}
+            />
+          </tbody>
+        </table>
+      </LedgerProvider>,
+    );
+  }
+
+  it('asks for a Source, refuses a spending category, and saves as income', async () => {
+    renderIncomeRow();
+    await userEvent.keyboard('{Escape}');
+    expect(field('Source')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Save income' }));
+    expect(screen.getByText('Add a source.')).toBeInTheDocument();
+
+    await userEvent.type(field('Source'), 'Acme Corp');
+    await userEvent.clear(field('Category'));
+    await userEvent.type(field('Category'), 'Groceries');
+    await userEvent.type(amount(), '5000');
+    await userEvent.click(screen.getByRole('button', { name: 'Save income' }));
+    expect(
+      screen.getByText('Not one of your income categories'),
+    ).toBeInTheDocument();
+    expect(saveSpending).not.toHaveBeenCalled();
+
+    await userEvent.clear(field('Category'));
+    await userEvent.type(field('Category'), 'Salary');
+    await userEvent.click(screen.getByRole('button', { name: 'Save income' }));
+    await waitFor(() =>
+      expect(saveSpending).toHaveBeenCalledWith(
+        expect.objectContaining({ ledger: 'income', merchant: 'Acme Corp' }),
+      ),
+    );
   });
 });

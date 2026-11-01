@@ -1,8 +1,14 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SettingsData } from '@/app/lib/definitions';
 import PhoneSettings from '@/app/ui/phone/phone-settings';
-import { accounts, categories, renderPhone } from '@/app/ui/phone/test-support';
+import {
+  accounts,
+  categories,
+  incomeCategories,
+  renderPhone,
+} from '@/app/ui/phone/test-support';
 import { ids } from '@/mocks/fixtures';
 
 const actions = vi.hoisted(() => ({
@@ -10,14 +16,22 @@ const actions = vi.hoisted(() => ({
   deleteCategory: vi.fn(),
   createAccount: vi.fn(),
   deleteAccount: vi.fn(),
+  createIncomeCategory: vi.fn(),
+  deleteIncomeCategory: vi.fn(),
 }));
 vi.mock('@/app/lib/actions', () => actions);
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-function setup(accountList = accounts) {
-  renderPhone(<PhoneSettings categories={categories} accounts={accountList} />);
+function setup(accountList: SettingsData['accounts'] = accounts) {
+  renderPhone(
+    <PhoneSettings
+      categories={categories}
+      incomeCategories={incomeCategories}
+      accounts={accountList}
+    />,
+  );
 }
 
 beforeEach(() => {
@@ -30,10 +44,9 @@ describe('PhoneSettings — categories', () => {
     expect(
       screen.getByRole('dialog', { name: 'Settings' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Categories' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(
+      screen.getByRole('button', { name: 'Spending categories' }),
+    ).toHaveAttribute('aria-pressed', 'true');
     expect(
       screen.getByRole('heading', { name: 'Your categories · 2' }),
     ).toBeInTheDocument();
@@ -128,5 +141,77 @@ describe('PhoneSettings — accounts', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Visa has 12 spendings, so it can’t be removed.',
     );
+  });
+});
+
+describe('PhoneSettings — income categories (specs/009)', () => {
+  it('has three sections, and lists Salary and Investments as defaults with their colours', async () => {
+    setup();
+    expect(
+      screen.getByRole('button', { name: 'Income categories' }),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Income categories' }),
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Default income categories · 2' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByTestId('income-category-swatch')).toHaveLength(2);
+    expect(
+      screen.getByRole('textbox', { name: 'New income category' }),
+    ).toBeInTheDocument();
+  });
+
+  it('adds an income category even when a spending category has the name', async () => {
+    actions.createIncomeCategory.mockResolvedValue({ status: 'ok' });
+    setup();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Income categories' }),
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'New income category' }),
+      'Gifts',
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add income category' }),
+    );
+    await waitFor(() =>
+      expect(actions.createIncomeCategory).toHaveBeenCalledWith('Gifts'),
+    );
+    expect(actions.createCategory).not.toHaveBeenCalled();
+  });
+
+  it('refuses a duplicate income category name ignoring case', async () => {
+    setup();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Income categories' }),
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'New income category' }),
+      'salary',
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add income category' }),
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '“salary” already exists.',
+    );
+    expect(actions.createIncomeCategory).not.toHaveBeenCalled();
+  });
+
+  it('refuses to remove an account that income uses, naming both counts', async () => {
+    setup([
+      { id: ids.visa, name: 'Visa', count: 3, incomeCount: 1 },
+      { id: ids.cash, name: 'Cash', count: 0, incomeCount: 2 },
+    ]);
+    await userEvent.click(screen.getByRole('button', { name: 'Accounts' }));
+    expect(
+      screen.getByText('3 spendings · 1 income entry'),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Cash' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Cash has 2 income entries, so it can’t be removed.',
+    );
+    expect(actions.deleteAccount).not.toHaveBeenCalled();
   });
 });

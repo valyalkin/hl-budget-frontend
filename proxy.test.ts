@@ -67,6 +67,18 @@ describe('proxy', () => {
     expect(getSession).not.toHaveBeenCalled();
   });
 
+  it('redirects a signed-out /income?month=2026-10 to login, like Spendings (specs/009)', async () => {
+    const response = await proxy(request('/income?month=2026-10'));
+    expect(response.headers.get('location')).toBe(
+      'http://app.test/auth/login?returnTo=%2Fincome%3Fmonth%3D2026-10',
+    );
+  });
+
+  it('serves the income sample CSV without a session (specs/009)', async () => {
+    const response = await proxy(request('/sample-income.csv'));
+    expect(response.status).toBe(200);
+  });
+
   it('does not treat /spendingsx as protected', async () => {
     expect((await proxy(request('/spendingsx'))).status).toBe(200);
   });

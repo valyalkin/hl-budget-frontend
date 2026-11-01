@@ -2,6 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import BreakdownCard from '@/app/ui/spendings/breakdown-card';
+import { LedgerProvider } from '@/app/ui/ledger-context';
 
 const items = Array.from({ length: 12 }, (_, i) => ({
   id: `id-${i}`,
@@ -253,5 +254,54 @@ describe('BreakdownCard, by account: colours and slice labels (specs/008 US2)', 
     expect(screen.getByTestId('donut-centre')).toHaveTextContent(
       'Cash$20.00 · 1%',
     );
+  });
+});
+
+describe('BreakdownCard on the Income page (specs/009 FR-064)', () => {
+  const incomeItems = [
+    { id: 'salary', name: 'Salary', cents: 500000, color: '#1e5b45' },
+    { id: 'investments', name: 'Investments', cents: 12025, color: '#1d4ed8' },
+  ];
+  function renderIncomeCard(kind: 'category' | 'account' = 'category') {
+    render(
+      <LedgerProvider ledger="income">
+        <BreakdownCard
+          kind={kind}
+          label="October 2026"
+          currency="CAD"
+          totalCents={512025}
+          items={incomeItems}
+        />
+      </LedgerProvider>,
+    );
+  }
+
+  it('keeps its Table / Pie choice under the income keys only', async () => {
+    renderIncomeCard();
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    expect(window.localStorage.getItem('hlb.income.byCategoryView')).toBe(
+      'pie',
+    );
+    expect(window.localStorage.getItem('hlb.byCategoryView')).toBeNull();
+    expect(
+      screen.getByRole('group', { name: /^Income by category: 2 categories/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('says nothing was received in an empty month', () => {
+    render(
+      <LedgerProvider ledger="income">
+        <BreakdownCard
+          kind="account"
+          label="October 2026"
+          currency="CAD"
+          totalCents={0}
+          items={[]}
+        />
+      </LedgerProvider>,
+    );
+    expect(
+      screen.getByText('Nothing received in October 2026.'),
+    ).toBeInTheDocument();
   });
 });

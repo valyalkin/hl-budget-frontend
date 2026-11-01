@@ -14,6 +14,7 @@ import {
   UiProbe,
 } from '@/app/ui/phone/test-support';
 import { ids, TODAY } from '@/mocks/fixtures';
+import { LedgerProvider } from '@/app/ui/ledger-context';
 
 const { saveSpending, push, replace } = vi.hoisted(() => ({
   saveSpending: vi.fn(),
@@ -286,5 +287,52 @@ describe('SpendingForm — no accounts (specs/007 FR-024)', () => {
       'Not one of your accounts',
     );
     expect(saveSpending).not.toHaveBeenCalled();
+  });
+});
+
+describe('SpendingForm for income (specs/009)', () => {
+  it('is titled New income, asks for a Source and saves as income', async () => {
+    saveSpending.mockResolvedValue({ status: 'ok', month: '2026-10' });
+    renderPhone(
+      <LedgerProvider ledger="income">
+        <SpendingForm
+          mode="add"
+          initial={empty}
+          today={TODAY}
+          currency="CAD"
+          categories={[{ id: ids.groceries, name: 'Salary', count: 2 }]}
+          accounts={accounts}
+          merchants={[]}
+        />
+      </LedgerProvider>,
+    );
+    expect(
+      screen.getByRole('heading', { name: 'New income' }),
+    ).toBeInTheDocument();
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Amount (CAD)' }),
+      '5000',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Add income' }));
+    expect(screen.getByText('Add a source.')).toBeInTheDocument();
+
+    await userEvent.type(
+      screen.getByRole('combobox', { name: 'Source' }),
+      'Acme Corp',
+    );
+    await userEvent.type(
+      screen.getByRole('combobox', { name: 'Category' }),
+      'Salary',
+    );
+    await userEvent.type(
+      screen.getByRole('combobox', { name: 'Account' }),
+      'Visa',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Add income' }));
+    await waitFor(() =>
+      expect(saveSpending).toHaveBeenCalledWith(
+        expect.objectContaining({ ledger: 'income', merchant: 'Acme Corp' }),
+      ),
+    );
   });
 });

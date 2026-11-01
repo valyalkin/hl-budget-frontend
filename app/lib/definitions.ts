@@ -85,6 +85,19 @@ export type AccountTotal = Schemas['AccountTotal'];
 export type Merchant = Schemas['Merchant'];
 export type MerchantList = Schemas['MerchantList'];
 
+/** Feature 009: generated aliases for income. */
+export type Income = Schemas['Income'];
+export type IncomePage = Schemas['IncomePage'];
+export type IncomeRequest = Schemas['IncomeRequest'];
+export type IncomeCategory = Schemas['IncomeCategory'];
+export type IncomeCategoryList = Schemas['IncomeCategoryList'];
+export type IncomeSourceList = Schemas['IncomeSourceList'];
+export type IncomeMonthlyTotals = Schemas['IncomeMonthlyTotals'];
+export type IncomeCategoryTotals = Schemas['IncomeCategoryTotals'];
+export type IncomeAccountTotals = Schemas['IncomeAccountTotals'];
+export type IncomeImport = Schemas['IncomeImport'];
+export type IncomeImportRequest = Schemas['IncomeImportRequest'];
+
 /** Feature 004: generated aliases for the CSV import. */
 export type SpendingImport = Schemas['SpendingImport'];
 export type SpendingImportRequest = Schemas['SpendingImportRequest'];
@@ -92,6 +105,20 @@ export type SpendingImportRow = Schemas['SpendingImportRow'];
 
 /** A category or account as the entry row and Settings need it. */
 export type NamedItem = { id: string; name: string; count: number };
+
+/**
+ * What Settings shows on both pages (specs/009 FR-090): spending categories, income categories
+ * and the shared accounts with both counts.
+ */
+export type SettingsData = {
+  categories: readonly (NamedItem & { isDefault: boolean })[];
+  incomeCategories: readonly (NamedItem & {
+    isDefault: boolean;
+    color: string;
+  })[];
+  /** `count` is the spendings that use it; `incomeCount` the income entries (0 when absent). */
+  accounts: readonly (NamedItem & { incomeCount?: number })[];
+};
 
 /** A past merchant as the entry row needs it. */
 export type MerchantOption = {

@@ -58,7 +58,7 @@ describe('DeleteSheet', () => {
       ),
     );
     expect(deleteSpending).toHaveBeenCalledOnce();
-    expect(deleteSpending).toHaveBeenCalledWith(spending.id);
+    expect(deleteSpending).toHaveBeenCalledWith(spending.id, 'spendings');
   });
 
   it('keeps the spending and says why when the delete fails', async () => {

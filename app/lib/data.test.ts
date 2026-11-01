@@ -9,12 +9,17 @@ import {
   getCategories,
   getMonthlyTotals,
   getMonthSpendings,
+  getEarliestYear,
+  getIncomeCategories,
+  getSettingsData,
+  loadLedgerPage,
   loadSpendingsPage,
 } from '@/app/lib/data';
 import {
   accountTotals,
   categoryTotals,
   ids,
+  incomeIds,
   monthlyTotals,
   spendingPage,
   spendings,
@@ -153,6 +158,7 @@ describe('spending screen reads (feature 003)', () => {
       id: ids.visa,
       name: 'Visa',
       count: 12,
+      incomeCount: 0,
     });
   });
 
@@ -251,5 +257,106 @@ describe('spending screen reads (feature 003)', () => {
     server.use(http.put(URL, () => HttpResponse.json(profile)));
     const data = await loadSpendingsPage(undefined);
     expect(data.ym).toEqual({ year: 2026, month: 10 });
+  });
+});
+
+describe('income reads (specs/009)', () => {
+  const API = 'http://api.test/api/v1';
+
+  it('loads the Income page from the income endpoints, mapped to the shared shapes', async () => {
+    const paths: string[] = [];
+    server.use(
+      http.put(URL, () => HttpResponse.json(profile)),
+      http.get(`${API}/*`, ({ request }) => {
+        paths.push(new globalThis.URL(request.url).pathname);
+        return undefined;
+      }),
+    );
+
+    const data = await loadLedgerPage('income', '2026-10');
+
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        '/api/v1/monthly-income-totals',
+        '/api/v1/incomes',
+        '/api/v1/income-category-totals',
+        '/api/v1/income-account-totals',
+        '/api/v1/income-categories',
+        '/api/v1/accounts',
+        '/api/v1/income-sources',
+      ]),
+    );
+    expect(paths).not.toContain('/api/v1/spendings');
+    expect(paths).not.toContain('/api/v1/categories');
+    // An income's source is shown where a spending's merchant is.
+    expect(data.spendings.map((s) => s.merchant)).toEqual([
+      'Wealthsimple',
+      'Acme Corp',
+    ]);
+    expect(data.totals.months[9]).toMatchObject({ spendingCount: 2 });
+    expect(data.categoryTotals.spendingCount).toBe(2);
+    expect(data.categoryTotals.items[0]).toMatchObject({
+      color: '#1e5b45',
+      spendingCount: 1,
+    });
+    expect(data.accountTotals.items[0]?.spendingCount).toBe(2);
+    expect(data.categories.map((c) => c.name)).toEqual([
+      'Freelance',
+      'Investments',
+      'Salary',
+    ]);
+    expect(data.merchants.items[0]).toMatchObject({
+      name: 'Acme Corp',
+      spendingCount: 10,
+    });
+    // Accounts are ranked by their income use on the Income page.
+    expect(data.accounts[0]).toEqual({ id: ids.visa, name: 'Visa', count: 0 });
+  });
+
+  it('keeps the Spendings page on the spending endpoints', async () => {
+    const paths: string[] = [];
+    server.use(
+      http.put(URL, () => HttpResponse.json(profile)),
+      http.get(`${API}/*`, ({ request }) => {
+        paths.push(new globalThis.URL(request.url).pathname);
+        return undefined;
+      }),
+    );
+
+    await loadSpendingsPage('2026-10');
+
+    expect(paths.some((p) => p.includes('income'))).toBe(false);
+  });
+
+  it('reads income categories with counts and colours, and all of Settings at once', async () => {
+    await expect(getIncomeCategories()).resolves.toContainEqual({
+      id: incomeIds.salary,
+      name: 'Salary',
+      count: 1,
+      isDefault: true,
+      color: '#1e5b45',
+    });
+    const settings = await getSettingsData();
+    expect(settings.categories.length).toBeGreaterThan(0);
+    expect(settings.incomeCategories).toHaveLength(3);
+    expect(settings.accounts[0]).toMatchObject({ incomeCount: 0 });
+  });
+
+  it('finds the earliest year of income from the incomes resource', async () => {
+    let seen = '';
+    server.use(
+      http.get(`${API}/incomes`, ({ request }) => {
+        seen = new globalThis.URL(request.url).search;
+        return HttpResponse.json({
+          items: [{ date: '2024-03-01' }],
+          page: 0,
+          size: 1,
+          totalItems: 1,
+          totalPages: 1,
+        });
+      }),
+    );
+    await expect(getEarliestYear('income')).resolves.toBe(2024);
+    expect(seen).toBe('?sort=date,asc&size=1&page=0');
   });
 });

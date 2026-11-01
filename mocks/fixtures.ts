@@ -1,4 +1,12 @@
 import type {
+  Income,
+  IncomeAccountTotals,
+  IncomeCategoryList,
+  IncomeCategoryTotals,
+  IncomeImport,
+  IncomeMonthlyTotals,
+  IncomePage,
+  IncomeSourceList,
   SpendingImport,
   AccountList,
   AccountTotals,
@@ -149,8 +157,20 @@ export const categoryList: CategoryList = {
 
 export const accountList: AccountList = {
   items: [
-    { id: ids.visa, name: 'Visa', spendingCount: 12, color: '#e11d48' },
-    { id: ids.cash, name: 'Cash', spendingCount: 0, color: '#0891b2' },
+    {
+      id: ids.visa,
+      name: 'Visa',
+      spendingCount: 12,
+      color: '#e11d48',
+      incomeCount: 0,
+    },
+    {
+      id: ids.cash,
+      name: 'Cash',
+      spendingCount: 0,
+      color: '#0891b2',
+      incomeCount: 0,
+    },
   ],
 };
 
@@ -175,4 +195,139 @@ export const spendingImport: SpendingImport = {
   lastDate: '2026-10-28',
   total: { amount: '73.60', currency: 'CAD' },
   createdAt: '2026-10-28T14:03:11Z',
+};
+
+// ---------------------------------------------------------------------------------------------
+// Income (specs/009)
+
+export const incomeIds = {
+  salary: 'a1b2c3d4-0000-4000-8000-000000000002',
+  investments: 'a1b2c3d4-0000-4000-8000-000000000001',
+  freelance: 'a1b2c3d4-0000-4000-8000-000000000003',
+  income1: 'b1b2c3d4-0000-4000-8000-000000000011',
+  income2: 'b1b2c3d4-0000-4000-8000-000000000012',
+} as const;
+
+export function incomeMonthlyTotals(year = 2026): IncomeMonthlyTotals {
+  return {
+    year,
+    today: TODAY,
+    months: Array.from({ length: 12 }, (_, i) => {
+      const month = `${year}-${String(i + 1).padStart(2, '0')}`;
+      if (year === 2026 && i === 9)
+        return { month, total: cad('5120.25'), entryCount: 2 };
+      return { month, total: cad('0.00'), entryCount: 0 };
+    }),
+  };
+}
+
+export const incomes: Income[] = [
+  {
+    id: incomeIds.income1,
+    date: '2026-10-20',
+    source: 'Wealthsimple',
+    amount: cad('120.25'),
+    category: { id: incomeIds.investments, name: 'Investments' },
+    account: { id: ids.visa, name: 'Visa' },
+    createdAt: '2026-10-20T14:03:11Z',
+    updatedAt: '2026-10-20T14:03:11Z',
+  },
+  {
+    id: incomeIds.income2,
+    date: '2026-10-15',
+    source: 'Acme Corp',
+    amount: cad('5000.00'),
+    category: { id: incomeIds.salary, name: 'Salary' },
+    account: { id: ids.visa, name: 'Visa' },
+    createdAt: '2026-10-15T14:03:11Z',
+    updatedAt: '2026-10-15T14:03:11Z',
+  },
+];
+
+export function incomePage(items: Income[] = incomes): IncomePage {
+  return { items, page: 0, size: 100, totalItems: items.length, totalPages: 1 };
+}
+
+export const incomeCategoryTotals: IncomeCategoryTotals = {
+  from: '2026-10-01',
+  to: '2026-10-31',
+  total: cad('5120.25'),
+  entryCount: 2,
+  items: [
+    {
+      category: { id: incomeIds.salary, name: 'Salary' },
+      total: cad('5000.00'),
+      entryCount: 1,
+      color: '#1e5b45',
+    },
+    {
+      category: { id: incomeIds.investments, name: 'Investments' },
+      total: cad('120.25'),
+      entryCount: 1,
+      color: '#1d4ed8',
+    },
+  ],
+};
+
+export const incomeAccountTotals: IncomeAccountTotals = {
+  from: '2026-10-01',
+  to: '2026-10-31',
+  total: cad('5120.25'),
+  entryCount: 2,
+  items: [
+    {
+      account: { id: ids.visa, name: 'Visa' },
+      total: cad('5120.25'),
+      entryCount: 2,
+      color: '#e11d48',
+    },
+  ],
+};
+
+export const incomeCategoryList: IncomeCategoryList = {
+  items: [
+    {
+      id: incomeIds.freelance,
+      name: 'Freelance',
+      isDefault: false,
+      incomeCount: 0,
+      color: '#e11d48',
+    },
+    {
+      id: incomeIds.investments,
+      name: 'Investments',
+      isDefault: true,
+      incomeCount: 1,
+      color: '#1d4ed8',
+    },
+    {
+      id: incomeIds.salary,
+      name: 'Salary',
+      isDefault: true,
+      incomeCount: 1,
+      color: '#1e5b45',
+    },
+  ],
+};
+
+export const incomeSourceList: IncomeSourceList = {
+  truncated: false,
+  items: [
+    {
+      name: 'Acme Corp',
+      incomeCount: 10,
+      lastUsedOn: '2026-10-15',
+      lastCategory: { id: incomeIds.salary, name: 'Salary' },
+      lastAccount: { id: ids.visa, name: 'Visa' },
+    },
+  ],
+};
+
+export const incomeImport: IncomeImport = {
+  id: 'c1b2c3d4-0000-4000-8000-000000000021',
+  incomeCount: 2,
+  firstDate: '2026-10-15',
+  lastDate: '2026-10-20',
+  total: cad('5120.25'),
+  createdAt: '2026-10-29T14:03:11Z',
 };
