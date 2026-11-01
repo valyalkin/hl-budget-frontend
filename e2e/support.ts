@@ -74,6 +74,57 @@ export async function ensureE2eAccount(page: Page) {
   await expect(dialog).toBeHidden();
 }
 
+/** Adds an account in Settings (the only place accounts are created, specs/007 FR-020). */
+export async function addAccountInSettings(page: Page, name: string) {
+  const dialog = await openAccountsSettings(page);
+  await dialog.getByRole('textbox', { name: 'New account' }).fill(name);
+  await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(
+    dialog.getByRole('button', { name: `Remove ${name}` }),
+  ).toBeVisible();
+  await closeSettings(page);
+}
+
+/** Removes an unused account in Settings, if it exists. */
+export async function removeAccountInSettings(page: Page, name: string) {
+  const dialog = await openAccountsSettings(page);
+  const remove = dialog.getByRole('button', { name: `Remove ${name}` });
+  if ((await remove.count()) > 0) {
+    await remove.click();
+    await expect(remove).toHaveCount(0);
+  }
+  await closeSettings(page);
+}
+
+/** Removes every unused account whose name starts with `prefix` (leftovers of a failed run). */
+export async function removeAccountsStartingWith(page: Page, prefix: string) {
+  const dialog = await openAccountsSettings(page);
+  const remove = dialog.getByRole('button', {
+    name: new RegExp(`^Remove ${prefix}`),
+  });
+  while ((await remove.count()) > 0) {
+    const before = await remove.count();
+    await remove.first().click();
+    await expect(remove).toHaveCount(before - 1);
+  }
+  await closeSettings(page);
+}
+
+async function openAccountsSettings(page: Page) {
+  await page.getByRole('button', { name: 'User settings' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await dialog.getByRole('tab', { name: 'Accounts' }).click();
+  return dialog;
+}
+
+async function closeSettings(page: Page) {
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  // The window remembers its section; leave it on Categories, where it starts.
+  await dialog.getByRole('tab', { name: 'Categories' }).click();
+  await dialog.getByRole('button', { name: 'Close settings' }).click();
+  await expect(dialog).toBeHidden();
+}
+
 /** A per-run marker for merchant names, so each spec finds and removes only its own data. */
 export function marker(spec: string): string {
   return `e2e-${spec}-${Date.now().toString(36)}`;

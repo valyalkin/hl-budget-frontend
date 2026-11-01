@@ -80,6 +80,18 @@ export default async function MonthSection({
               color: item.color,
             }))}
           />
+          <BreakdownCard
+            kind="account"
+            label={label}
+            currency={currency}
+            totalCents={toCents(data.accountTotals.total.amount)}
+            items={data.accountTotals.items.map((item) => ({
+              id: item.account.id,
+              name: item.account.name,
+              cents: toCents(item.total.amount),
+              color: item.color,
+            }))}
+          />
         </aside>
       </div>
     </main>

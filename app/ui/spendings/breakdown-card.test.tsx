@@ -119,3 +119,97 @@ describe('BreakdownCard, by category', () => {
     ).toBeInTheDocument();
   });
 });
+
+const accounts = [
+  { id: 'debit', name: 'Debit card', cents: 215000, color: '#e11d48' },
+  { id: 'amex', name: 'Amex', cents: 17644, color: '#0891b2' },
+  { id: 'cash', name: 'Cash', cents: 2000, color: '#a855f7' },
+];
+const accountsTotal = accounts.reduce((sum, item) => sum + item.cents, 0);
+
+function renderAccountCard(list = accounts) {
+  render(
+    <BreakdownCard
+      kind="account"
+      label="October 2026"
+      currency="CAD"
+      totalCents={accountsTotal}
+      items={list}
+    />,
+  );
+}
+
+describe('BreakdownCard, by account (specs/008 US1)', () => {
+  it('is headed By account and lists each account with amount, share and a total', () => {
+    renderAccountCard();
+    expect(
+      screen.getByRole('region', { name: 'By account' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Account' }),
+    ).toBeInTheDocument();
+    const rows = screen.getAllByRole('row');
+    expect(rows).toHaveLength(1 + 3 + 1);
+    expect(rows[1]).toHaveTextContent('Debit card$2,150.0092%');
+    expect(rows[2]).toHaveTextContent('Amex$176.448%');
+    expect(rows[4]).toHaveTextContent('Total$2,346.44100%');
+  });
+
+  it('as a pie shows one slice per account with no “Everything else”', async () => {
+    renderAccountCard();
+    await userEvent.click(screen.getByRole('button', { name: 'Pie' }));
+    const chart = screen.getByRole('group', {
+      name: 'Spending by account: 3 accounts, largest Debit card at 92%',
+    });
+    expect(within(chart).getAllByRole('img')).toHaveLength(3);
+    expect(screen.queryByText(/Everything else/)).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('list', { name: 'Legend' })).getAllByRole(
+        'listitem',
+      ),
+    ).toHaveLength(3);
+  });
+
+  it('says nothing was spent in an empty month', () => {
+    renderAccountCard([]);
+    expect(
+      screen.getByText('Nothing spent in October 2026.'),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps its own Table / Pie choice, apart from By category', async () => {
+    render(
+      <>
+        <BreakdownCard
+          kind="category"
+          label="October 2026"
+          currency="CAD"
+          totalCents={total}
+          items={items}
+        />
+        <BreakdownCard
+          kind="account"
+          label="October 2026"
+          currency="CAD"
+          totalCents={accountsTotal}
+          items={accounts}
+        />
+      </>,
+    );
+    const accountCard = screen.getByRole('region', { name: 'By account' });
+    const categoryCard = screen.getByRole('region', { name: 'By category' });
+    await userEvent.click(
+      within(accountCard).getByRole('button', { name: 'Pie' }),
+    );
+
+    expect(window.localStorage.getItem('hlb.byAccountView')).toBe('pie');
+    expect(window.localStorage.getItem('hlb.byCategoryView')).toBeNull();
+    expect(
+      within(accountCard).getByRole('button', { name: 'Pie' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      within(categoryCard).getByRole('button', { name: 'Table' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
