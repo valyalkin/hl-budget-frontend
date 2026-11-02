@@ -263,7 +263,7 @@ export default function SpendingForm({
 
         <SuggestInput
           label={text.party}
-          placeholder="Where did you spend?"
+          placeholder={text.partyPlaceholder}
           value={draft.merchant}
           onChange={(merchant) => update({ merchant })}
           items={merchants}

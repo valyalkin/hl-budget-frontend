@@ -309,6 +309,10 @@ describe('SpendingForm for income (specs/009)', () => {
     expect(
       screen.getByRole('heading', { name: 'New income' }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Source' })).toHaveAttribute(
+      'placeholder',
+      'Where did it come from?',
+    );
     await userEvent.type(
       screen.getByRole('textbox', { name: 'Amount (CAD)' }),
       '5000',

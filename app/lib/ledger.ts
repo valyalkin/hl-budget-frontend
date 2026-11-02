@@ -22,6 +22,8 @@ export type LedgerText = {
   caption: string;
   /** Who was paid, or who paid. */
   party: string;
+  /** The phone form's hint in that field. */
+  partyPlaceholder: string;
   /** `No spendings recorded in October 2026.` (desktop). */
   emptyMonth: (label: string) => string;
   /** `No spendings in October 2026.` (phone). */
@@ -69,6 +71,7 @@ export const LEDGER: Record<Ledger, LedgerText> = {
     listName: 'Spending list',
     caption: 'Spendings in',
     party: 'Merchant',
+    partyPlaceholder: 'Where did you spend?',
     emptyMonth: (label) => `No spendings recorded in ${label}.`,
     emptyMonthPhone: (label) => `No spendings in ${label}.`,
     addRow: 'Add a spending row',
@@ -109,6 +112,7 @@ export const LEDGER: Record<Ledger, LedgerText> = {
     listName: 'Income list',
     caption: 'Income in',
     party: 'Source',
+    partyPlaceholder: 'Where did it come from?',
     emptyMonth: (label) => `No income recorded in ${label}.`,
     emptyMonthPhone: (label) => `No income in ${label}.`,
     addRow: 'Add an income row',
