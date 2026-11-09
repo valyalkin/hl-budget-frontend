@@ -207,7 +207,10 @@ export async function saveSpending(
   );
 }
 
-/** Deletes a spending (or an income entry) at once, with no confirmation and no undo (FR-060). */
+/**
+ * Deletes a spending (or an income entry). The desktop table calls it once the 5-second undo time
+ * is over (specs/010 FR-010); the phone calls it after its confirmation sheet.
+ */
 export async function deleteSpending(
   spendingId: string,
   ledger: Ledger = 'spendings',

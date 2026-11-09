@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import {
   type KeyboardEvent,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -39,6 +40,10 @@ export type EntryRowProps = {
   onGone: (message: string) => void;
   /** With no accounts: opens Settings on Accounts (specs/007 FR-024). */
   onOpenSettings?: () => void;
+  /** Whether the calendar opens by itself. Defaults to on for a new row, off for an edit. */
+  openCalendar?: boolean;
+  /** A field to focus when the row opens, e.g. merchant for a quick add (specs/010 FR-002). */
+  startField?: Field;
 };
 
 const iconButton =
@@ -61,6 +66,9 @@ function refFor(text: string, items: readonly NamedItem[]) {
  * arrows move to the previous or next field once the cursor is at that end of the text, or the
  * whole text is selected; a field reached this way has its text selected. Accepting a past
  * merchant fills an empty category and account from its latest spending (FR-058).
+ *
+ * A quick add from a row's date (specs/010) opens with that date, `openCalendar={false}` and
+ * `startField="merchant"`.
  */
 export default function EntryRow({
   mode,
@@ -75,6 +83,8 @@ export default function EntryRow({
   onCancel,
   onGone,
   onOpenSettings = () => openSettings('accounts'),
+  openCalendar = mode === 'add',
+  startField,
 }: EntryRowProps) {
   const noAccounts = accounts.length === 0;
   const router = useRouter();
@@ -99,6 +109,14 @@ export default function EntryRow({
   const focus = (field: Field) => {
     refs.current[field]?.focus();
   };
+
+  // Only on opening: later re-renders must not pull focus back.
+  const startFieldOnOpen = useRef(startField);
+  useEffect(() => {
+    if (startFieldOnOpen.current) {
+      refs.current[startFieldOnOpen.current]?.focus();
+    }
+  }, []);
 
   const save = () => {
     const current = latest.current;
@@ -231,7 +249,7 @@ export default function EntryRow({
             value={draft.date}
             today={today}
             onChange={(date) => update({ date })}
-            autoOpen={mode === 'add'}
+            autoOpen={openCalendar}
             onPicked={() => focus('merchant')}
             onKeyDown={onDateKeyDown}
             buttonRef={(element) => {

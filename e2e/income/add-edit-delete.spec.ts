@@ -5,6 +5,7 @@ import {
   marker,
   removeIncomeCreatedBy,
   signIn,
+  UNDO_WAIT_MS,
 } from './support';
 
 test.describe('specs/009 US2: record, edit and delete income on the desktop', () => {
@@ -122,7 +123,9 @@ test.describe('specs/009 US2: record, edit and delete income on the desktop', ()
       .filter({ hasText: source })
       .getByRole('button', { name: /^Remove / })
       .click();
-    await expect(page.getByText(source)).toHaveCount(0);
+    await expect(page.getByText(source)).toHaveCount(0, {
+      timeout: UNDO_WAIT_MS,
+    });
   });
 
   test('switching to Spendings with a row open discards it', async ({

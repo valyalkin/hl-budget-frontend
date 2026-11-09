@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { E2E_ACCOUNT, MONTH_HEADING } from '../support';
+import { E2E_ACCOUNT, MONTH_HEADING, waitForPendingDeletes } from '../support';
 
 export * from '../support';
 
@@ -65,6 +65,7 @@ export async function removeIncomeCreatedBy(page: Page, mark: string) {
     await remove.first().click();
     await expect(remove).toHaveCount(before - 1);
   }
+  await waitForPendingDeletes(page);
 }
 
 /** Opens Settings on Income categories. */

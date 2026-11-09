@@ -4,10 +4,13 @@ import {
   marker,
   removeSpendingsCreatedBy,
   signIn,
+  UNDO_WAIT_MS,
 } from './support';
 
 test.describe('US4: edit and delete from the table', () => {
-  test('edit a row’s amount, then remove it at once', async ({ page }) => {
+  test('edit a row’s amount, then remove it (deleted after the undo time)', async ({
+    page,
+  }) => {
     const mark = marker('edit');
     const merchant = `${mark} Diner`;
     await signIn(page);
@@ -41,7 +44,9 @@ test.describe('US4: edit and delete from the table', () => {
       .filter({ hasText: merchant })
       .getByRole('button', { name: /^Remove / })
       .click();
-    await expect(page.getByText(merchant)).toHaveCount(0);
+    await expect(page.getByText(merchant)).toHaveCount(0, {
+      timeout: UNDO_WAIT_MS,
+    });
     await removeSpendingsCreatedBy(page, mark);
   });
 });

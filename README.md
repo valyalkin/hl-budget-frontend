@@ -12,7 +12,9 @@ Feature specs live in the `hl-budget-spec` repository (`specs/001-platform-found
 
 - `/`: the signed-out screen (header with Sign in). A signed-in visitor is sent to `/spendings`.
 - `/spendings?month=YYYY-MM`: the month line, the spendings table with inline add, edit and
-  delete (keyboard entry with autofill for merchant, category and account), the month total and
+  delete (keyboard entry with autofill for merchant, category and account). Clicking a row's date
+  opens a new row on that date; remove fades the row with an Undo button for 5 seconds before the
+  delete is sent (specs/010, `app/ui/spendings/use-pending-deletes.ts`). The month total and
   the By category and By account cards (specs/008), each a table or a donut with its own stored
   choice (`app/ui/spendings/breakdown-*.tsx`, one set of components for both). Each category and
   account is drawn in its own colour from the API (no CSS variables), and a hovered, focused or tapped slice names itself in the donut's centre

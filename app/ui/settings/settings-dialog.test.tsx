@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ids } from '@/mocks/fixtures';
 import type { SettingsData } from '@/app/lib/definitions';
+import { FLUSH_DELETES_EVENT } from '@/app/lib/pending-deletes';
 import SettingsDialog from '@/app/ui/settings/settings-dialog';
 
 const actions = vi.hoisted(() => ({
@@ -74,6 +75,14 @@ beforeEach(() => {
 });
 
 describe('SettingsDialog', () => {
+  it('deletes removed entries still waiting for undo before it opens (specs/010)', async () => {
+    const flush = vi.fn();
+    window.addEventListener(FLUSH_DELETES_EVENT, flush);
+    await open();
+    expect(flush).toHaveBeenCalledTimes(1);
+    window.removeEventListener(FLUSH_DELETES_EVENT, flush);
+  });
+
   it('opens with vertical sections; arrow keys move between them', async () => {
     const dialog = await open();
     const tabs = within(dialog).getByRole('tablist', {
