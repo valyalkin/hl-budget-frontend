@@ -22,7 +22,9 @@ import { useLedger } from '@/app/ui/ledger-context';
 import EntryRow from '@/app/ui/spendings/entry-row';
 import SpendingRow from '@/app/ui/spendings/spending-row';
 
-type OpenRow = null | { mode: 'add' } | { mode: 'edit'; spendingId: string };
+/** `date` is set by a quick add from a row's date (specs/010 US1). */
+type OpenRow =
+  null | { mode: 'add'; date?: string } | { mode: 'edit'; spendingId: string };
 
 /**
  * The month's spendings (US1) with inline add, edit and delete (US2–US4). Only one row is open at a
@@ -204,9 +206,12 @@ export default function SpendingsTable({
           <tbody>
             {open?.mode === 'add' ? (
               <EntryRow
+                key={open.date ?? 'add'}
                 mode="add"
+                openCalendar={!open.date}
+                startField={open.date ? 'merchant' : undefined}
                 initial={{
-                  date: defaultDateFor(ym, today),
+                  date: open.date ?? defaultDateFor(ym, today),
                   merchant: '',
                   category: '',
                   account: '',
@@ -235,7 +240,11 @@ export default function SpendingsTable({
                   key={spending.id}
                   spending={spending}
                   locked={open !== null}
-                  removing={removing === spending.id}
+                  onAddOnDate={() => {
+                    setMessage('');
+                    setOpen({ mode: 'add', date: spending.date });
+                  }}
+                  onUndo={() => undefined}
                   onEdit={() => {
                     setMessage('');
                     setOpen({ mode: 'edit', spendingId: spending.id });

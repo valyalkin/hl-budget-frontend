@@ -99,7 +99,9 @@ describe('SpendingsTable', () => {
 
   it('every row has edit and remove buttons that keyboard users reach too', async () => {
     renderTable();
-    await userEvent.tab();
+    await userEvent.tab(); // +
+    await userEvent.tab(); // the row's date (specs/010)
+    expect(screen.getByRole('button', { name: 'Add on Oct 27' })).toHaveFocus();
     await userEvent.tab();
     expect(
       screen.getByRole('button', {
@@ -169,6 +171,36 @@ describe('SpendingsTable', () => {
     await waitFor(() =>
       expect(push).toHaveBeenCalledWith('/spendings?month=2026-09'),
     );
+  });
+
+  it('a row’s date opens one new row on that date, calendar closed, focus in Merchant (specs/010)', async () => {
+    renderTable();
+    await userEvent.click(screen.getByRole('button', { name: 'Add on Oct 1' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Merchant' })).toHaveFocus();
+    const rows = screen.getAllByRole('row');
+    expect(
+      within(rows[1]!).getByRole('button', { name: /Open calendar$/ }),
+    ).toHaveAccessibleName(/Oct 1, 2026/);
+    expect(
+      screen.getAllByRole('button', { name: 'Save spending' }),
+    ).toHaveLength(1);
+
+    // While the row is open no date adds; Escape brings them back.
+    expect(screen.queryByRole('button', { name: /^Add on / })).toBeNull();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('button', { name: 'Save spending' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Add on Oct 27' }),
+    ).toBeInTheDocument();
+  });
+
+  it('no date adds while an edit row is open (specs/010)', async () => {
+    renderTable();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Edit Rent — Unit 4B on Oct 1' }),
+    );
+    expect(screen.queryByRole('button', { name: /^Add on / })).toBeNull();
   });
 
   it('remove deletes at once, with no confirmation', async () => {
@@ -277,6 +309,15 @@ describe('SpendingsTable for income (specs/009)', () => {
     expect(
       screen.getByText('No income recorded in October 2026.'),
     ).toBeInTheDocument();
+  });
+
+  it('a date opens a new income row on that date, with Source focused (specs/010)', async () => {
+    renderIncome();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add on Oct 27' }),
+    );
+    expect(screen.getByRole('combobox', { name: 'Source' })).toHaveFocus();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('removes an income through the income ledger', async () => {

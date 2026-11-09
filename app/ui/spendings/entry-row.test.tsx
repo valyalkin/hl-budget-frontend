@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ids, TODAY } from '@/mocks/fixtures';
@@ -119,6 +119,31 @@ describe('EntryRow', () => {
       },
     });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('a quick-add row starts on its date with the calendar closed and focus in Merchant (specs/010)', async () => {
+    renderRow({
+      initial: {
+        date: '2026-10-14',
+        merchant: '',
+        category: '',
+        account: '',
+        amount: '',
+      },
+      openCalendar: false,
+      startField: 'merchant',
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(field('Merchant')).toHaveFocus();
+
+    // The date stays editable, and the calendar opens on that day.
+    await userEvent.click(
+      screen.getByRole('button', { name: /Open calendar$/ }),
+    );
+    const calendar = screen.getByRole('dialog', { name: 'Choose date' });
+    expect(
+      within(calendar).getByRole('button', { pressed: true }),
+    ).toHaveAccessibleName('Oct 14, 2026');
   });
 
   it('never overwrites a category already chosen, and fills nothing for a new merchant', async () => {
