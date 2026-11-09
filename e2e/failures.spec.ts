@@ -63,4 +63,22 @@ test.describe('US4: the API is down (web server with API_BASE_URL on a closed po
       /ECONNREFUSED|500|stack|at /,
     );
   });
+
+  test('the Overview shows its own message with Try again and no figures (specs/011 FR-026)', async ({
+    page,
+  }) => {
+    const base = process.env.E2E_DOWN_BASE_URL ?? '';
+    await page.goto(`${base}/auth/login`);
+    await completeUniversalLogin(page);
+    await page.waitForURL('**/spendings**');
+    await page.goto(`${base}/overview`);
+
+    await expect(
+      page.getByText('We couldn’t load your overview. Try again in a moment.'),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Year totals' })).toHaveCount(
+      0,
+    );
+  });
 });

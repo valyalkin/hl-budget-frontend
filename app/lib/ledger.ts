@@ -6,6 +6,20 @@ export type Ledger = 'spendings' | 'income';
 
 export const LEDGERS: readonly Ledger[] = ['spendings', 'income'];
 
+/** A tab in the header: a ledger, or the year Overview (specs/011 research R-003). */
+export type Tab = Ledger | 'overview';
+
+/** The header tabs in order. Overview is not a ledger, so it has no `LEDGER` entry. */
+export const TABS: readonly {
+  tab: Tab;
+  label: string;
+  route: '/spendings' | '/income' | '/overview';
+}[] = [
+  { tab: 'spendings', label: 'Spendings', route: '/spendings' },
+  { tab: 'income', label: 'Income', route: '/income' },
+  { tab: 'overview', label: 'Overview', route: '/overview' },
+];
+
 /**
  * Everything the screens word or store differently for spendings and for income. The spending
  * values are exactly what the screens said before feature 009, so Spendings does not change.

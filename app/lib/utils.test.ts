@@ -7,6 +7,8 @@ import {
   donutArcs,
   exactMatch,
   formatMoney,
+  formatShare,
+  formatWholeDollars,
   isFutureMonth,
   longDate,
   defaultDateFor,
@@ -245,4 +247,24 @@ describe('donutArcs', () => {
 it('pluralises', () => {
   expect(plural(1, 'spending', 'spendings')).toBe('1 spending');
   expect(plural(14, 'spending', 'spendings')).toBe('14 spendings');
+});
+
+describe('Overview formatting (specs/011 research R-009)', () => {
+  it('formats whole dollars with a minus sign before the dollar sign', () => {
+    expect(formatWholeDollars(1248000)).toBe('$12,480');
+    expect(formatWholeDollars(-124000)).toBe('\u2212$1,240');
+    expect(formatWholeDollars(0)).toBe('$0');
+    expect(formatWholeDollars(1050)).toBe('$11');
+    expect(formatWholeDollars(-1050)).toBe('\u2212$11');
+    expect(formatWholeDollars(1049)).toBe('$10');
+  });
+
+  it('formats shares: whole percentages, one decimal below 1%', () => {
+    expect(formatShare(24, 100)).toBe('24%');
+    expect(formatShare(2150, 2234)).toBe('96%');
+    expect(formatShare(4, 1000)).toBe('0.4%');
+    expect(formatShare(0, 1000)).toBe('0%');
+    expect(formatShare(5, 0)).toBe('0%');
+    expect(formatShare(1000, 1000)).toBe('100%');
+  });
 });

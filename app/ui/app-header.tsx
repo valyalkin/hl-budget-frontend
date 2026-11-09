@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { LEDGER, LEDGERS, type Ledger } from '@/app/lib/ledger';
+import { TABS, type Tab } from '@/app/lib/ledger';
 import LedgerTabs from '@/app/ui/ledger-tabs';
 const signInClass =
   'inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
@@ -7,21 +7,21 @@ const signOutClass =
   'inline-flex h-10 items-center rounded-[10px] px-3 text-sm font-medium text-ink-2 hover:bg-line-soft focus-visible:outline-2 focus-visible:outline-brand';
 
 /** The tabs before the current `?month=` is known: plain links, the same look. */
-function StaticTabs({ current }: { current: Ledger }) {
+function StaticTabs({ current }: { current: Tab }) {
   return (
     <nav aria-label="Main" className="flex items-center gap-1">
-      {LEDGERS.map((ledger) => (
+      {TABS.map(({ tab, label, route }) => (
         <a
-          key={ledger}
-          href={LEDGER[ledger].route}
-          aria-current={ledger === current ? 'page' : undefined}
+          key={tab}
+          href={route}
+          aria-current={tab === current ? 'page' : undefined}
           className={
-            ledger === current
+            tab === current
               ? 'rounded-md px-2 py-1 text-sm font-semibold text-brand'
               : 'rounded-md px-2 py-1 text-sm font-medium text-ink-2'
           }
         >
-          {LEDGER[ledger].tab}
+          {label}
         </a>
       ))}
     </nav>
@@ -50,19 +50,19 @@ function Logo() {
 }
 
 /**
- * The app header (FR-001). Signed out: Sign in. Signed in: the Spendings | Income tabs (specs/009), the user-settings
+ * The app header (FR-001). Signed out: Sign in. Signed in: the Spendings | Income | Overview tabs (specs/009, specs/011), the user-settings
  * button (passed in as `settingsSlot`, a client component) and Sign out. Sign-in and sign-out are
  * plain links: a prefetched link would start a real login or logout.
  */
 export default function AppHeader({
   signedIn,
   settingsSlot,
-  ledger = 'spendings',
+  current = 'spendings',
 }: {
   signedIn: boolean;
   settingsSlot?: React.ReactNode;
-  /** The tab being shown (specs/009). */
-  ledger?: Ledger;
+  /** The tab being shown (specs/009, specs/011). */
+  current?: Tab;
 }) {
   return (
     <header className="border-b border-line bg-surface">
@@ -75,8 +75,8 @@ export default function AppHeader({
             </span>
           </div>
           {signedIn ? (
-            <Suspense fallback={<StaticTabs current={ledger} />}>
-              <LedgerTabs current={ledger} variant="nav" />
+            <Suspense fallback={<StaticTabs current={current} />}>
+              <LedgerTabs current={current} variant="nav" />
             </Suspense>
           ) : null}
         </div>

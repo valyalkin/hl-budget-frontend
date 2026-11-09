@@ -67,3 +67,20 @@ test('SC-006: every phone screen and sheet', async ({ page }) => {
   ).toBeVisible();
   await expectAccessible(page, 'review');
 });
+
+test('specs/011 SC-005: the phone Overview and its account menu', async ({
+  page,
+}) => {
+  await signInPhone(page);
+  await page.goto('/overview');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Overview' }),
+  ).toBeVisible();
+  await expectAccessible(page, 'phone overview');
+  await page.getByRole('button', { name: 'Account menu' }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Account menu' }),
+  ).toBeVisible();
+  await expectAccessible(page, 'phone overview menu');
+  await page.goBack();
+});

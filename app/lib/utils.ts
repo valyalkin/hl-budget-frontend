@@ -79,6 +79,28 @@ export function sharePercent(partCents: number, totalCents: number): number {
 }
 
 /**
+ * Whole dollars for the Overview (specs/011 FR-011, FR-022): `"$12,480"`, and `"−$1,240"` with a
+ * minus sign (U+2212) before the dollar sign. Half a dollar rounds away from zero.
+ */
+export function formatWholeDollars(cents: number, currency = 'CAD'): string {
+  const dollars = Math.round(Math.abs(cents) / 100);
+  const text = formatCents(dollars * 100, currency, { wholeUnits: true });
+  return cents < 0 && dollars > 0 ? `\u2212${text}` : text;
+}
+
+/**
+ * A share of a total for the Overview (FR-022): whole percentages, one decimal below 1%
+ * (`"0.4%"`); `"0%"` for nothing or when the total is 0.
+ */
+export function formatShare(partCents: number, totalCents: number): string {
+  if (totalCents <= 0 || partCents <= 0) {
+    return '0%';
+  }
+  const share = (partCents * 100) / totalCents;
+  return share < 1 ? `${share.toFixed(1)}%` : `${Math.round(share)}%`;
+}
+
+/**
  * What the user typed in the amount field, as the API's decimal string: `"12,5"` → `"12.50"`.
  * Null when it is not a positive amount with at most 8 digits and 2 decimals.
  */

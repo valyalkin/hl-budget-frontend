@@ -39,7 +39,7 @@ describe('AppHeader', () => {
 
 describe('AppHeader tabs (specs/009)', () => {
   it('shows Spendings and Income, marking the page being shown', () => {
-    render(<AppHeader signedIn ledger="income" />);
+    render(<AppHeader signedIn current="income" />);
     const nav = screen.getByRole('navigation', { name: 'Main' });
     expect(within(nav).getByRole('link', { name: 'Income' })).toHaveAttribute(
       'aria-current',
@@ -51,6 +51,27 @@ describe('AppHeader tabs (specs/009)', () => {
     expect(within(nav).getByRole('link', { name: 'Income' })).toHaveAttribute(
       'href',
       '/income',
+    );
+  });
+});
+
+describe('AppHeader tabs (specs/011)', () => {
+  it('lists Overview after Income and can mark it current', () => {
+    render(<AppHeader signedIn current="overview" />);
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    const tabs = within(nav).getAllByRole('link');
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'Spendings',
+      'Income',
+      'Overview',
+    ]);
+    expect(within(nav).getByRole('link', { name: 'Overview' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(nav).getByRole('link', { name: 'Overview' })).toHaveAttribute(
+      'href',
+      '/overview',
     );
   });
 });

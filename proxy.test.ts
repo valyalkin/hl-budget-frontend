@@ -74,6 +74,13 @@ describe('proxy', () => {
     );
   });
 
+  it('redirects a signed-out /overview?year=2025 to login (specs/011)', async () => {
+    const response = await proxy(request('/overview?year=2025'));
+    expect(response.headers.get('location')).toBe(
+      'http://app.test/auth/login?returnTo=%2Foverview%3Fyear%3D2025',
+    );
+  });
+
   it('serves the income sample CSV without a session (specs/009)', async () => {
     const response = await proxy(request('/sample-income.csv'));
     expect(response.status).toBe(200);

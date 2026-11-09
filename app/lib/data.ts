@@ -27,6 +27,12 @@ import {
 } from '@/app/lib/definitions';
 import type { Ledger } from '@/app/lib/ledger';
 import {
+  buildOverview,
+  type OverviewData,
+  parseYear,
+  requestedYear,
+} from '@/app/lib/overview';
+import {
   monthBounds,
   parseMonthParam,
   type YearMonth,
@@ -359,3 +365,75 @@ export async function getEarliestYear(ledger: Ledger): Promise<number | null> {
   const first = page.items[0];
   return first ? Number.parseInt(first.date.slice(0, 4), 10) : null;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Overview (specs/011 research R-001): a calendar year from the existing totals endpoints.
+
+function yearBounds(year: number): { from: string; to: string } {
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
+}
+
+/** Spending per category over a calendar year (the endpoint takes up to 366 days). */
+export async function getYearCategoryTotals(
+  year: number,
+): Promise<CategoryTotals> {
+  const { from, to } = yearBounds(year);
+  return read<CategoryTotals>(`/api/v1/category-totals?from=${from}&to=${to}`);
+}
+
+/** Spending per account over a calendar year. */
+export async function getYearAccountTotals(
+  year: number,
+): Promise<AccountTotals> {
+  const { from, to } = yearBounds(year);
+  return read<AccountTotals>(`/api/v1/account-totals?from=${from}&to=${to}`);
+}
+
+/**
+ * Everything the Overview shows for `?year=` and `?month=` (contracts/overview-ui.md §1), in two
+ * rounds of parallel calls: (1) the profile, both monthly totals for the requested year and both
+ * earliest years; (2) the year's category and account totals, plus the monthly totals again only
+ * when clamping moved the year.
+ */
+export const loadOverview = cache(async function loadOverview(params: {
+  year?: string | string[];
+  month?: string | string[];
+}): Promise<OverviewData> {
+  const asked = requestedYear(params);
+  const [, spend0, income0, earliestSpending, earliestIncome] =
+    await Promise.all([
+      ensureMyProfile(),
+      getMonthlyTotals(asked),
+      getMonthlyIncomeTotals(asked),
+      getEarliestYear('spendings'),
+      getEarliestYear('income'),
+    ]);
+  const today = spend0.today;
+  const currentYear = Number.parseInt(today.slice(0, 4), 10);
+  const minYear = Math.min(
+    earliestSpending ?? currentYear,
+    earliestIncome ?? currentYear,
+    currentYear,
+  );
+  const year = parseYear(params, today, minYear);
+  const [spendMonthly, incomeMonthly, categoryTotals, accountTotals] =
+    await Promise.all([
+      spend0.year === year ? spend0 : getMonthlyTotals(year),
+      income0.year === year ? income0 : getMonthlyIncomeTotals(year),
+      getYearCategoryTotals(year),
+      getYearAccountTotals(year),
+    ]);
+  return buildOverview({
+    year,
+    today,
+    minYear,
+    month:
+      typeof params.month === 'string' && /^\d{4}-\d{2}$/.test(params.month)
+        ? params.month
+        : null,
+    spendMonthly,
+    incomeMonthly,
+    categoryTotals,
+    accountTotals,
+  });
+});

@@ -163,3 +163,43 @@ test('the Income screen, its cards and Settings sections (specs/009)', async ({
   await dialog.getByRole('tab', { name: 'Spending categories' }).click();
   await dialog.getByRole('button', { name: 'Close settings' }).click();
 });
+
+test('the Overview in chart and table views (specs/011 SC-005)', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto('/overview');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Overview' }),
+  ).toBeVisible();
+  const cards = ['Earned vs spent', 'Spent by category', 'Spent by account'];
+
+  for (const card of cards) {
+    await page
+      .getByRole('region', { name: card })
+      .getByRole('button', { name: 'Chart' })
+      .click();
+  }
+  await expectAccessible(page, 'overview charts');
+
+  // A focused chart shows its tooltip and announces the month.
+  await page
+    .getByRole('region', { name: 'Earned vs spent' })
+    .getByRole('slider', { name: 'Months' })
+    .focus();
+  await expectAccessible(page, 'overview chart focused');
+
+  for (const card of cards) {
+    await page
+      .getByRole('region', { name: card })
+      .getByRole('button', { name: 'Table' })
+      .click();
+  }
+  await expectAccessible(page, 'overview tables');
+  for (const card of cards) {
+    await page
+      .getByRole('region', { name: card })
+      .getByRole('button', { name: 'Chart' })
+      .click();
+  }
+});

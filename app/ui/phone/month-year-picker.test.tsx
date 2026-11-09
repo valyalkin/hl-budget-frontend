@@ -50,6 +50,24 @@ describe('PhoneHeader', () => {
       within(nav).getByRole('link', { name: 'Spendings' }),
     ).toHaveAttribute('href', '/spendings?month=2026-09');
   });
+
+  it('offers Overview third and marks it current when told to (specs/011)', () => {
+    renderPhone(<PhoneHeader current="overview" />);
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((l) => l.textContent),
+    ).toEqual(['Spendings', 'Income', 'Overview']);
+    expect(within(nav).getByRole('link', { name: 'Overview' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(nav).getByRole('link', { name: 'Overview' })).toHaveAttribute(
+      'href',
+      '/overview?month=2026-09',
+    );
+  });
 });
 
 describe('MonthYearPicker for income (specs/009)', () => {
