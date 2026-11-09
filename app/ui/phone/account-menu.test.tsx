@@ -10,11 +10,11 @@ const grab = (next: PhoneUi) => {
   ui = next;
 };
 
-function setup() {
+function setup(allowImport = true) {
   renderPhone(
     <>
       <UiProbe onUi={grab} />
-      <AccountMenu />
+      <AccountMenu allowImport={allowImport} />
     </>,
   );
   act(() => ui.open({ kind: 'menu' }));
@@ -23,6 +23,17 @@ function setup() {
 beforeEach(() => window.history.replaceState(null, '', '/spendings'));
 
 describe('AccountMenu', () => {
+  it('leaves out Import CSV on the Overview (specs/011 R-008)', () => {
+    setup(false);
+    expect(
+      screen.getByRole('button', { name: 'Settings' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Import CSV' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign out' })).toBeInTheDocument();
+  });
+
   it('offers Settings, Import CSV and a plain Sign out link', () => {
     setup();
     expect(

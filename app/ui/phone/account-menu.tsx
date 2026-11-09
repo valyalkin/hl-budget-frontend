@@ -9,9 +9,12 @@ const row =
 
 /**
  * The account menu (FR-070, FR-071): Settings, Import CSV and Sign out in a bottom sheet. Sign out
- * is a plain link, as in the desktop header: prefetching it would sign the user out.
+ * is a plain link, as in the desktop header: prefetching it would sign the user out. The Overview
+ * has nothing to import into, so it passes `allowImport={false}` (specs/011 research R-008).
  */
-export default function AccountMenu() {
+export default function AccountMenu({
+  allowImport = true,
+}: { allowImport?: boolean } = {}) {
   const ui = usePhoneUi();
   return (
     <PhoneDialog
@@ -29,14 +32,16 @@ export default function AccountMenu() {
           <SettingsIcon className="text-muted" />
           Settings
         </button>
-        <button
-          type="button"
-          onClick={() => ui.replaceTop({ kind: 'import' })}
-          className={row}
-        >
-          <UploadIcon className="text-muted" />
-          Import CSV
-        </button>
+        {allowImport ? (
+          <button
+            type="button"
+            onClick={() => ui.replaceTop({ kind: 'import' })}
+            className={row}
+          >
+            <UploadIcon className="text-muted" />
+            Import CSV
+          </button>
+        ) : null}
         <div aria-hidden="true" className="my-1 h-px bg-line" />
         <a href="/auth/logout" className={`${row} text-error`}>
           <SignOutIcon />

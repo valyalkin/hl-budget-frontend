@@ -36,6 +36,17 @@ Feature specs live in the `hl-budget-spec` repository (`specs/001-platform-found
   `merchant`). Import CSV on Income reads a Source / Payer / Employer column and offers
   `/sample-income.csv`. Settings has Spending categories, Income categories and Accounts (with both
   counts). Gated in `proxy.ts`; `noindex`.
+- `/overview?month=YYYY-MM&year=YYYY` (specs/011): one calendar year after the Income tab.
+  Earned, Spent and Saved tiles; Earned vs spent by month, Spent by category and Spent by account,
+  each as a chart or a table (choice kept in `localStorage`). Read-only and built from the
+  existing totals endpoints (`loadOverview` in `app/lib/data.ts`, pure `buildOverview` in
+  `app/lib/overview.ts`). `?month=` is passed through so the other tabs keep their month; the
+  year arrows replace the history entry and stop at the earliest year with entries and at the
+  current year. Charts use ECharts (bar charts, SVG renderer only), loaded by a dynamic import in
+  `app/ui/charts/echart.tsx` so it never ships with the other pages; option builders and text
+  alternatives are in `app/lib/overview-charts.ts`, and a transparent slider over each chart
+  lets the keyboard step through it. One responsive layout serves desktop and phone; on a phone
+  the account menu has no Import CSV. Gated in `proxy.ts`; `noindex`.
 - **Phones (below 640px wide)**: the same `/spendings` address shows a touch layout instead
   (specs/006-mobile-view): Month and Year dropdowns, the month total, a compact list with a
   floating Add spending button, By category and By account (a three-option switch) as a table or a

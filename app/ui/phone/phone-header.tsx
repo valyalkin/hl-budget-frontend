@@ -1,5 +1,6 @@
 'use client';
 
+import type { Tab } from '@/app/lib/ledger';
 import LedgerTabs from '@/app/ui/ledger-tabs';
 import { useLedger } from '@/app/ui/ledger-context';
 import { LogoIcon, UserIcon } from '@/app/ui/phone/icons';
@@ -7,9 +8,10 @@ import { usePhoneUi } from '@/app/ui/phone/phone-ui-provider';
 
 /**
  * The phone header (FR-010): logo and name, the user icon that opens the account menu, and below
- * them the Spendings | Income switch (specs/009 FR-070).
+ * them the Spendings | Income | Overview switch (specs/009 FR-070, specs/011). `current` names the
+ * tab when the page is not a ledger (the Overview); otherwise it is the ledger being shown.
  */
-export default function PhoneHeader() {
+export default function PhoneHeader({ current }: { current?: Tab } = {}) {
   const { open, layers } = usePhoneUi();
   const { ledger } = useLedger();
   return (
@@ -32,7 +34,7 @@ export default function PhoneHeader() {
           <UserIcon />
         </button>
       </div>
-      <LedgerTabs current={ledger} variant="segmented" />
+      <LedgerTabs current={current ?? ledger} variant="segmented" />
     </header>
   );
 }

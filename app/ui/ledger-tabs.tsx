@@ -3,10 +3,11 @@
 import clsx from 'clsx';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { LEDGER, LEDGERS, type Ledger } from '@/app/lib/ledger';
+import { TABS, type Tab } from '@/app/lib/ledger';
 
 /**
- * The Spendings | Income tabs (specs/009 FR-001, FR-002, research R-005). Each is a link that keeps
+ * The Spendings | Income | Overview tabs (specs/009 FR-001, FR-002, research R-005; specs/011
+ * research R-003). Each is a link that keeps
  * the selected `?month=`, so switching is a client-side navigation with no page reload. Links
  * replace the history entry, so Back never switches tabs (FR-072). `aria-current="page"` marks
  * the tab being shown (FR-095).
@@ -15,13 +16,13 @@ export default function LedgerTabs({
   current,
   variant,
 }: {
-  current: Ledger;
-  /** `nav`: the desktop header's links. `segmented`: the phone's two-option switch. */
+  current: Tab;
+  /** `nav`: the desktop header's links. `segmented`: the phone's switch. */
   variant: 'nav' | 'segmented';
 }) {
   const month = useSearchParams()?.get('month');
-  const href = (ledger: Ledger) =>
-    month ? `${LEDGER[ledger].route}?month=${month}` : LEDGER[ledger].route;
+  const href = (route: (typeof TABS)[number]['route']) =>
+    month ? `${route}?month=${month}` : route;
 
   return (
     <nav
@@ -32,12 +33,12 @@ export default function LedgerTabs({
           : 'grid auto-cols-fr grid-flow-col gap-1 rounded-xl bg-line-soft p-1',
       )}
     >
-      {LEDGERS.map((ledger) => {
-        const selected = ledger === current;
+      {TABS.map(({ tab, label, route }) => {
+        const selected = tab === current;
         return (
           <Link
-            key={ledger}
-            href={href(ledger)}
+            key={tab}
+            href={href(route)}
             replace
             scroll={false}
             aria-current={selected ? 'page' : undefined}
@@ -56,7 +57,7 @@ export default function LedgerTabs({
                   ),
             )}
           >
-            {LEDGER[ledger].tab}
+            {label}
           </Link>
         );
       })}

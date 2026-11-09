@@ -35,7 +35,7 @@ export default function LedgerPage({
           <DesktopOnly>
             <AppHeader
               signedIn
-              ledger={ledger}
+              current={ledger}
               settingsSlot={
                 <Suspense fallback={null}>
                   <SettingsSection />

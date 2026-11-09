@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { auth0 } from '@/app/lib/auth0';
 
 // specs/009: the Income page is gated like Spendings.
-export const PROTECTED_PREFIXES = ['/spendings', '/income'];
+export const PROTECTED_PREFIXES = ['/spendings', '/income', '/overview'];
 
 /** SDK routes that would expose the profile or a token to browser JavaScript (FR-007). */
 const REFUSED_AUTH_ROUTES = ['/auth/profile', '/auth/access-token'];
