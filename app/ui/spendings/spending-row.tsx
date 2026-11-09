@@ -1,6 +1,6 @@
 'use client';
 
-import type { Ref } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Spending } from '@/app/lib/definitions';
 import { formatMoney, shortDate } from '@/app/lib/utils';
 
@@ -22,8 +22,6 @@ export default function SpendingRow({
   onRemove,
   onAddOnDate,
   onUndo,
-  removeRef,
-  undoRef,
 }: {
   spending: Spending;
   /** Another row is open: quick add, edit and remove are unavailable (FR-033). */
@@ -34,9 +32,20 @@ export default function SpendingRow({
   onRemove: () => void;
   onAddOnDate: () => void;
   onUndo: () => void;
-  removeRef?: Ref<HTMLButtonElement>;
-  undoRef?: Ref<HTMLButtonElement>;
 }) {
+  // Remove moves focus to Undo; Undo, or a failed delete, moves it back to Remove (FR-011, FR-012).
+  const undoButton = useRef<HTMLButtonElement>(null);
+  const removeButton = useRef<HTMLButtonElement>(null);
+  const before = useRef(pending);
+  useEffect(() => {
+    if (!before.current && pending === 'waiting') {
+      undoButton.current?.focus();
+    } else if (before.current && !pending) {
+      removeButton.current?.focus();
+    }
+    before.current = pending;
+  }, [pending]);
+
   const day = shortDate(spending.date);
   const what = `${spending.merchant} on ${day}`;
   const truncate = 'max-w-0 truncate';
@@ -92,7 +101,7 @@ export default function SpendingRow({
         {pending ? (
           <div className="flex justify-end">
             <button
-              ref={undoRef}
+              ref={undoButton}
               type="button"
               aria-label="Undo"
               title="Undo remove"
@@ -142,7 +151,7 @@ export default function SpendingRow({
               </svg>
             </button>
             <button
-              ref={removeRef}
+              ref={removeButton}
               type="button"
               aria-label={`Remove ${what}`}
               disabled={locked}

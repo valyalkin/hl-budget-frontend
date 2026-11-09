@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FLUSH_DELETES_EVENT } from '@/app/lib/pending-deletes';
 import ImportCsvButton from '@/app/ui/import/import-csv-button';
 import ImportNotice from '@/app/ui/import/import-notice';
 import ImportProvider from '@/app/ui/import/import-provider';
@@ -53,6 +54,14 @@ beforeEach(() => {
 });
 
 describe('ImportDialog', () => {
+  it('deletes removed entries still waiting for undo when it opens (specs/010)', async () => {
+    const flush = vi.fn();
+    window.addEventListener(FLUSH_DELETES_EVENT, flush);
+    await openAndLoad();
+    expect(flush).toHaveBeenCalled();
+    window.removeEventListener(FLUSH_DELETES_EVENT, flush);
+  });
+
   it('opens as a modal labelled by its stage', async () => {
     const dialog = await openAndLoad();
     expect(dialog).toHaveAttribute('open');

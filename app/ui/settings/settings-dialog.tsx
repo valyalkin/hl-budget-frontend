@@ -1,6 +1,7 @@
 'use client';
 
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import { flushPendingDeletes } from '@/app/lib/pending-deletes';
 import type { SettingsData } from '@/app/lib/definitions';
 import AccountsPanel from '@/app/ui/settings/accounts-panel';
 import CategoriesPanel from '@/app/ui/settings/categories-panel';
@@ -34,7 +35,12 @@ export default function SettingsDialog({
   const tabs = useRef<Partial<Record<Section, HTMLButtonElement | null>>>({});
   const [section, setSection] = useState<Section>('categories');
 
-  const openDialog = () => dialog.current?.showModal();
+  // Removed entries still waiting to be deleted are deleted first, so a category or account they
+  // used can be removed here (specs/010 FR-018).
+  const openDialog = () => {
+    flushPendingDeletes();
+    dialog.current?.showModal();
+  };
   const closeDialog = () => dialog.current?.close();
 
   // Another part of the page can ask for a section (specs/007 FR-024: "Open Settings").
@@ -43,6 +49,7 @@ export default function SettingsDialog({
       const wanted = (event as CustomEvent<Section>).detail;
       setSection(SECTIONS.some((s) => s.id === wanted) ? wanted : 'categories');
       if (!dialog.current?.open) {
+        flushPendingDeletes();
         dialog.current?.showModal();
       }
     };

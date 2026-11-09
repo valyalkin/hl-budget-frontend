@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { deleteSpending } from '@/app/lib/actions';
 import type {
   MerchantOption,
@@ -13,6 +13,7 @@ import {
   formatMoney,
   monthLabel,
   monthParam,
+  shortDate,
   type MoneyValue,
   type YearMonth,
 } from '@/app/lib/utils';
@@ -21,14 +22,22 @@ import { useOptionalImport } from '@/app/ui/import/import-provider';
 import { useLedger } from '@/app/ui/ledger-context';
 import EntryRow from '@/app/ui/spendings/entry-row';
 import SpendingRow from '@/app/ui/spendings/spending-row';
+import { usePendingDeletes } from '@/app/ui/spendings/use-pending-deletes';
 
 /** `date` is set by a quick add from a row's date (specs/010 US1). */
 type OpenRow =
   null | { mode: 'add'; date?: string } | { mode: 'edit'; spendingId: string };
 
+/** How an entry is named in announcements, e.g. "Lunch on Oct 14". */
+const nameOf = (spending: Spending) =>
+  `${spending.merchant} on ${shortDate(spending.date)}`;
+
 /**
  * The month's spendings (US1) with inline add, edit and delete (US2–US4). Only one row is open at a
  * time (FR-033). The footer total comes from the server's month total, not a sum in the browser.
+ *
+ * specs/010: a row's date opens a new row on that date (US1). Remove no longer deletes at once: the
+ * row waits 5 seconds with Undo, then the delete is sent (US2, FR-010–FR-019).
  */
 export default function SpendingsTable({
   spendings,
@@ -53,8 +62,7 @@ export default function SpendingsTable({
   const { ledger, text } = useLedger();
   const [open, setOpen] = useState<OpenRow>(null);
   const [message, setMessage] = useState('');
-  const [removing, setRemoving] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [announcement, setAnnouncement] = useState('');
   const setImportRowOpen = useOptionalImport()?.setRowOpen;
   const rowOpen = open !== null;
 
@@ -109,21 +117,31 @@ export default function SpendingsTable({
     setMessage(text);
   };
 
+  // Names of removed entries, for announcements once their row may be gone.
+  const names = useRef(new Map<string, string>());
+  const pending = usePendingDeletes({
+    onDelete: (id) => deleteSpending(id, ledger),
+    onDeleted: (id) => setAnnouncement(`${names.current.get(id)} deleted.`),
+    onError: (_id, text) => setMessage(text),
+    onSignedOut: () => router.replace('/'),
+  });
+  const { settle } = pending;
+  useEffect(() => {
+    settle(spendings.map((spending) => spending.id));
+  }, [settle, spendings]);
+
   const remove = (spending: Spending) => {
-    if (removing) {
-      return;
-    }
-    setRemoving(spending.id);
     setMessage('');
-    startTransition(async () => {
-      const result = await deleteSpending(spending.id, ledger);
-      setRemoving(null);
-      if (result.status === 'signed-out') {
-        router.replace('/');
-      } else if (result.status === 'error') {
-        setMessage(result.message);
-      }
-    });
+    names.current.set(spending.id, nameOf(spending));
+    pending.start(spending.id);
+    setAnnouncement(
+      `${nameOf(spending)} removed. Undo available for 5 seconds.`,
+    );
+  };
+
+  const undo = (spending: Spending) => {
+    pending.undo(spending.id);
+    setAnnouncement(`${nameOf(spending)} restored.`);
   };
 
   const rowProps = {
@@ -240,11 +258,12 @@ export default function SpendingsTable({
                   key={spending.id}
                   spending={spending}
                   locked={open !== null}
+                  pending={pending.phaseOf(spending.id)}
                   onAddOnDate={() => {
                     setMessage('');
                     setOpen({ mode: 'add', date: spending.date });
                   }}
-                  onUndo={() => undefined}
+                  onUndo={() => undo(spending)}
                   onEdit={() => {
                     setMessage('');
                     setOpen({ mode: 'edit', spendingId: spending.id });
@@ -276,6 +295,14 @@ export default function SpendingsTable({
         }
       >
         {message}
+      </p>
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {announcement}
       </p>
     </section>
   );

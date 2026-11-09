@@ -8,6 +8,7 @@ import ReviewStage from '@/app/ui/import/review-stage';
 import { FloatingRoot } from '@/app/ui/spendings/use-floating';
 import { useLedger } from '@/app/ui/ledger-context';
 import { ledgerHref } from '@/app/lib/ledger';
+import { flushPendingDeletes } from '@/app/lib/pending-deletes';
 
 /**
  * The CSV import window (US1–US4): a native modal <dialog>, so focus stays inside, the page behind
@@ -37,6 +38,8 @@ export default function ImportDialog() {
   useEffect(() => {
     // showModal() throws on a dialog that is already open (development runs effects twice).
     if (dialog && !dialog.open) {
+      // Deletes still waiting out their undo happen first (specs/010 FR-018).
+      flushPendingDeletes();
       dialog.showModal();
     }
   }, [dialog]);

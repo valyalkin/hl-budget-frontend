@@ -187,6 +187,19 @@ export async function addSpendingViaUi(page: Page, spending: NewSpending) {
   ).toBeVisible();
 }
 
+/**
+ * Removed rows wait 5 seconds for Undo before they are deleted (specs/010); waits until every
+ * faded row has left the table.
+ */
+export async function waitForPendingDeletes(page: Page) {
+  await expect(page.locator('tr[data-pending="true"]')).toHaveCount(0, {
+    timeout: UNDO_WAIT_MS,
+  });
+}
+
+/** Long enough for the 5-second undo time plus the delete itself. */
+export const UNDO_WAIT_MS = 10_000;
+
 /** Removes every spending in the shown month whose merchant contains `mark`. */
 export async function removeSpendingsCreatedBy(page: Page, mark: string) {
   const remove = page.getByRole('button', {
@@ -197,6 +210,7 @@ export async function removeSpendingsCreatedBy(page: Page, mark: string) {
     await remove.first().click();
     await expect(remove).toHaveCount(before - 1);
   }
+  await waitForPendingDeletes(page);
 }
 
 /** A date `daysAgo` days before today, day first (`DD/MM/YYYY`), as bank exports write it. */
